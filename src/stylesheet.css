@@ -1,0 +1,162 @@
+/* Root font-size is the text-scale anchor: every label size below is in em, so one
+   value (the glyph-size setting) resizes them together. JS drives the key geometry
+   (row height, gutters, tray padding) from the unscaled fit size, so labels scale
+   without moving the keys. Keep the em-metrics here in sync with Metric in keyboard.js. */
+
+.touch-board {
+    background-color: rgb(14, 14, 16);
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 0.8em 0.8em 0.95em 0.8em;
+    font-size: 17px;
+    font-family: "IBM Plex Sans", "IBM Plex Sans Devanagari", "IBM Plex Sans JP", "IBM Plex Sans KR", "IBM Plex Sans SC", "IBM Plex Sans TC", "IBM Plex Sans Thai", "IBM Plex Sans Arabic", "IBM Plex Sans Hebrew", "Noto Sans", "Cantarell", sans-serif;
+}
+
+.touch-board-key {
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background-gradient-direction: vertical;
+    background-gradient-start: rgba(65, 65, 69, 1);
+    background-gradient-end: rgba(49, 49, 53, 1);
+    color: #f5f5f7;
+    font-size: 1em;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    transition-duration: 90ms;
+}
+
+.touch-board-key:hover {
+    background-gradient-start: rgba(79, 79, 83, 1);
+    background-gradient-end: rgba(61, 61, 65, 1);
+}
+
+.touch-board-key:active {
+    background-gradient-start: rgba(91, 91, 95, 1);
+    background-gradient-end: rgba(75, 75, 79, 1);
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+/* Key-corner roundness (`corner` setting) via a root class. Soft is the 6px base and
+   needs no rule. The accent popup sits outside this root (uiGroup), keeping the base. */
+.touch-board-sharp .touch-board-key {
+    border-radius: 2px;
+}
+
+.touch-board-round .touch-board-key {
+    border-radius: 12px;
+}
+
+/* Tray-corner toggle (`rounded` setting). Squares the top corners so no transparent
+   corner sits over a window sliding up behind the tray and flashes an artifact. */
+.touch-board-flat {
+    border-radius: 0;
+}
+
+/* Functional keys sit darker than the alphanumeric tiles. Placed after the base key
+   so the equal-specificity gradient override wins. */
+.touch-board-function {
+    background-gradient-start: rgba(41, 41, 45, 1);
+    background-gradient-end: rgba(31, 31, 35, 1);
+}
+
+.touch-board-function:hover {
+    background-gradient-start: rgba(53, 53, 57, 1);
+    background-gradient-end: rgba(41, 41, 45, 1);
+}
+
+/* Pin the dark keys' pressed flash to their own tone: they share .touch-board-key
+   and would otherwise inherit the lighter base :active gradient. */
+.touch-board-function:active,
+.touch-board-modifier:active {
+    background-gradient-start: rgba(79, 79, 83, 1);
+    background-gradient-end: rgba(63, 63, 67, 1);
+}
+
+.touch-board-glyph {
+    font-size: 1.29em;
+    font-weight: 400;
+}
+
+/* Functional tiers (compact keys, modifiers) carry the smallest faces, sized a touch
+   above the bare em ratio for legibility. The glyph-size setting scales every tier. */
+.touch-board-compact {
+    font-size: 0.77em;
+    font-weight: 600;
+    color: rgba(245, 245, 247, 0.82);
+}
+
+.touch-board-modifier {
+    font-size: 0.82em;
+    font-weight: 500;
+    color: rgba(245, 245, 247, 0.88);
+    background-gradient-start: rgba(41, 41, 45, 1);
+    background-gradient-end: rgba(31, 31, 35, 1);
+}
+
+.touch-board-modifier:hover {
+    background-gradient-start: rgba(53, 53, 57, 1);
+    background-gradient-end: rgba(41, 41, 45, 1);
+}
+
+.touch-board-active {
+    background-gradient-start: rgba(56, 124, 246, 1);
+    background-gradient-end: rgba(40, 104, 226, 1);
+    border: 1px solid rgba(120, 170, 255, 0.5);
+    color: #ffffff;
+}
+
+/* Locked modifier (and Caps when on) stays engaged across keys. Border stays 1px like
+   every state so engaging changes only colour, never the box model, or the key would
+   grow and shove the layout. */
+.touch-board-locked {
+    background-gradient-start: rgba(120, 170, 255, 1);
+    background-gradient-end: rgba(86, 146, 250, 1);
+    border: 1px solid rgba(200, 222, 255, 1);
+    color: #ffffff;
+}
+
+/* Long-press accent chooser: a floating row echoing the tray fill and shadow. */
+.touch-board-popup {
+    background-color: rgb(14, 14, 16);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.7em;
+    padding: 0.35em;
+    box-shadow: 0 0.4em 1.1em rgba(0, 0, 0, 0.55);
+}
+
+/* Each variant mirrors .touch-board-key so the row looks cut from the keyboard. */
+.touch-board-popup-key {
+    margin: 0.12em;
+    min-width: 2em;
+    min-height: 2.2em;
+    padding: 0 0.4em;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background-gradient-direction: vertical;
+    background-gradient-start: rgba(65, 65, 69, 1);
+    background-gradient-end: rgba(49, 49, 53, 1);
+    color: #f5f5f7;
+    font-size: 1.2em;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    transition-duration: 90ms;
+}
+
+/* The candidate under pointer/finger lights like a functional key pressed — the
+   lightest grey tone, not the engaged blue. _track sets the active pseudo-class on
+   press, mirroring hover. */
+.touch-board-popup-key:hover,
+.touch-board-popup-key:active {
+    background-gradient-start: rgba(79, 79, 83, 1);
+    background-gradient-end: rgba(63, 63, 67, 1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+/* Tight (portrait) layout: trims tray padding so keys keep more of the row height on
+   a portrait display. The inter-key gutter shrinks separately in Row.vfunc_allocate. */
+.touch-board-tight {
+    padding: 0.5em 0.5em 0.6em 0.5em;
+}

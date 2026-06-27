@@ -1,0 +1,9 @@
+{
+  "uuid": "touch-board@d3z-the-dev.github.io",
+  "name": "Touch Board",
+  "description": "On-screen keyboard for coding, terminal work, and similar tasks. Panel button, evdev injection, live xkb tracking, three profiles, modifier modes, accent popups.",
+  "shell-version": ["50"],
+  "session-modes": ["user", "unlock-dialog"],
+  "settings-schema": "org.gnome.shell.extensions.touch-board",
+  "url": "https://github.com/d3z-the-dev/touch-board"
+}

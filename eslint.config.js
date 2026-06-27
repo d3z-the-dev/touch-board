@@ -1,0 +1,43 @@
+import js from '@eslint/js';
+
+const gjsGlobals = {
+    globalThis: 'readonly',
+    global: 'readonly',
+    console: 'readonly',
+    log: 'readonly',
+    logError: 'readonly',
+    print: 'readonly',
+    printerr: 'readonly',
+    TextEncoder: 'readonly',
+    TextDecoder: 'readonly',
+    Intl: 'readonly',
+    imports: 'readonly',
+};
+
+export default [
+    {
+        ignores: ['node_modules/**', 'dist/**', 'build/**', 'types/**'],
+    },
+    js.configs.recommended,
+    {
+        files: ['src/**/*.js', 'eslint.config.js'],
+        languageOptions: {
+            ecmaVersion: 2024,
+            sourceType: 'module',
+            globals: gjsGlobals,
+        },
+        rules: {
+            // tsc (checkJs + noUnusedLocals/Parameters) owns unused detection and,
+            // unlike eslint, understands JSDoc type references such as @type {Meta.Window}.
+            'no-unused-vars': 'off',
+        },
+    },
+    {
+        files: ['scripts/**/*.mjs'],
+        languageOptions: {
+            ecmaVersion: 2024,
+            sourceType: 'module',
+            globals: {process: 'readonly', console: 'readonly'},
+        },
+    },
+];

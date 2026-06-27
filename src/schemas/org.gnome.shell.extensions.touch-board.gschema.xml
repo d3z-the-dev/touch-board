@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.gnome.shell.extensions.touch-board.case">
+    <value nick="lowercase" value="0"/>
+    <value nick="titlecase" value="1"/>
+    <value nick="uppercase" value="2"/>
+  </enum>
+  <enum id="org.gnome.shell.extensions.touch-board.layout">
+    <value nick="compact" value="0"/>
+    <value nick="standard" value="1"/>
+    <value nick="full" value="2"/>
+  </enum>
+  <enum id="org.gnome.shell.extensions.touch-board.modifier-mode">
+    <value nick="hold" value="0"/>
+    <value nick="latch" value="1"/>
+    <value nick="toggle" value="2"/>
+  </enum>
+  <enum id="org.gnome.shell.extensions.touch-board.click">
+    <value nick="thock" value="0"/>
+    <value nick="click" value="1"/>
+    <value nick="tap" value="2"/>
+    <value nick="pop" value="3"/>
+  </enum>
+  <enum id="org.gnome.shell.extensions.touch-board.corner">
+    <value nick="sharp" value="0"/>
+    <value nick="soft" value="1"/>
+    <value nick="round" value="2"/>
+  </enum>
+  <schema id="org.gnome.shell.extensions.touch-board" path="/org/gnome/shell/extensions/touch-board/">
+    <key name="font" type="s">
+      <default>'IBM Plex Sans'</default>
+      <summary>Key glyph font family</summary>
+      <description>Font family used to render the key glyphs. The default keeps the stylesheet font, which carries a built-in fallback chain (the script-specific IBM Plex Sans siblings, then a generic sans-serif) so glyphs outside the family still render. A custom family is used on its own; the system substitutes a fallback font for any glyph it lacks.</description>
+    </key>
+    <key name="fkeys" type="a{ss}">
+      <default>{}</default>
+      <summary>Function-row overrides</summary>
+      <description>Maps a function-row slot (f1-f12) to a standard function id. A slot with no entry taps its default function key.</description>
+    </key>
+    <key name="active-color" type="s">
+      <default>'#8a8a8e'</default>
+      <summary>Engaged-key colour</summary>
+      <description>Hex colour drawn on a one-shot or locked modifier. The locked state uses a brighter shade derived from it.</description>
+    </key>
+    <key name="case" enum="org.gnome.shell.extensions.touch-board.case">
+      <default>'lowercase'</default>
+      <summary>Label case</summary>
+      <description>Case applied to the static key faces (Esc, Tab, Ctrl). The F in F1-F12 always stays uppercase; typed glyphs follow the active layout.</description>
+    </key>
+    <key name="layout" enum="org.gnome.shell.extensions.touch-board.layout">
+      <default>'standard'</default>
+      <summary>Keyboard profile</summary>
+      <description>Which key block to draw: a 60% compact block, the default 75% block with the function row, navigation column and arrow cluster, or a 100% full block that adds the numpad.</description>
+    </key>
+    <key name="height" type="i">
+      <default>35</default>
+      <range min="18" max="60"/>
+      <summary>Keyboard height</summary>
+      <description>Keyboard height as a percent of the display height. Being relative to the screen, it holds across resolutions and both orientations.</description>
+    </key>
+    <key name="spacing" type="i">
+      <default>75</default>
+      <range min="0" max="100"/>
+      <summary>Key spacing</summary>
+      <description>Spacing between keys as a percent of the default gutter. 100 keeps the default spacing; lower values tighten the gap on both axes, leaving the key and board sizes unchanged.</description>
+    </key>
+    <key name="glyph-size" type="i">
+      <default>100</default>
+      <range min="75" max="135"/>
+      <summary>Font size</summary>
+      <description>Font size of the key glyphs as a percent of the default. 100 keeps the default size; the scale applies to every label tier at once and leaves the key and board sizes unchanged.</description>
+    </key>
+    <key name="corner" enum="org.gnome.shell.extensions.touch-board.corner">
+      <default>'soft'</default>
+      <summary>Key corners</summary>
+      <description>Roundness of the key corners. Sharp is nearly square, soft keeps the default rounding, round is fully rounded.</description>
+    </key>
+    <key name="rounded" type="b">
+      <default>true</default>
+      <summary>Rounded keyboard corners</summary>
+      <description>Whether the keyboard's top corners are rounded. When on, a window sliding up behind the transparent corners can flash an artifact; turn it off to square the corners and remove it.</description>
+    </key>
+    <key name="modifier-mode" enum="org.gnome.shell.extensions.touch-board.modifier-mode">
+      <default>'latch'</default>
+      <summary>Modifier behaviour</summary>
+      <description>How a soft modifier (Shift, Ctrl, Super, Alt) responds to a tap. Hold: a quick tap is one real keystroke and a long press locks. Latch: a tap arms the next keystroke only and a double tap locks. Toggle: every tap flips a lock.</description>
+    </key>
+    <key name="accents" type="b">
+      <default>true</default>
+      <summary>Accent popup</summary>
+      <description>Whether a long press on a Latin letter opens a popup of accented variants. When off, every key repeats on hold instead.</description>
+    </key>
+    <key name="click-enabled" type="b">
+      <default>true</default>
+      <summary>Key click sound</summary>
+      <description>Whether tapping a key plays a short click. The click is synthesised and routed through the shell's event-sound channel, so a system mute of event sounds silences it too.</description>
+    </key>
+    <key name="click-sound" enum="org.gnome.shell.extensions.touch-board.click">
+      <default>'thock'</default>
+      <summary>Click sound</summary>
+      <description>Which synthesised click to play: thock (deep and warm), click (soft and muted), tap (crisp and tactile) or pop (light and high).</description>
+    </key>
+    <key name="click-volume" type="i">
+      <default>35</default>
+      <range min="0" max="100"/>
+      <summary>Click volume</summary>
+      <description>Loudness of the key click as a percent of full scale. Zero is silent, the same as turning the click off.</description>
+    </key>
+  </schema>
+</schemalist>
