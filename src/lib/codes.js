@@ -1,5 +1,3 @@
-// Linux evdev key codes (linux/input-event-codes.h),
-// injected through the virtual keyboard so the active xkb layout produces the glyph.
 export const Code = Object.freeze({
     ESC: 1, GRAVE: 41,
     F1: 59, F2: 60, F3: 61, F4: 62, F5: 63, F6: 64,
@@ -35,14 +33,13 @@ export const Code = Object.freeze({
     SCALE: 120, SEARCH: 217, KBDILLUMUP: 230, KBDILLUMDOWN: 229,
 });
 
-// Behaviour of a key when pressed.
 export const Kind = Object.freeze({
-    KEY: 'key',           // single tap, releases any one-shot modifiers afterwards
-    MODIFIER: 'modifier', // tap = single keystroke / unlock; long press = lock
-    LOCK: 'lock',         // toggles in the system (Caps Lock)
-    NUM: 'num',           // local Num: toggles the numpad between numeric and navigation
-    FN: 'fn',             // local Fn layer: selects each key's alternate face/code, injects nothing itself
-    PAD: 'pad',           // a numpad key: types a digit or a navigation keysym per Num mode
-    HIDE: 'hide',         // dismisses the on-screen keyboard, injects nothing
-    SPACER: 'spacer',     // empty grid cell used to keep clusters aligned
+    KEY: 'key',
+    MODIFIER: 'modifier',
+    LOCK: 'lock',
+    NUM: 'num',
+    FN: 'fn',
+    PAD: 'pad',
+    HIDE: 'hide',
+    SPACER: 'spacer',
 });

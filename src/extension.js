@@ -12,10 +12,9 @@ export default class TouchBoard extends Extension {
     }
 
     disable() {
-        // `unlock-dialog` session mode lets the keyboard run on the lock screen,
-        // so a touch-only user can type their password to unlock. disable() tears it down;
-        // nothing keeps running while the session is locked.
-        this._bridge?.deactivate();
+        // The `unlock-dialog` session mode keeps the keyboard alive on the lock screen:
+        // without it a touch-only device cannot type the password to unlock.
+        this._bridge.deactivate();
         this._bridge = null;
     }
 }

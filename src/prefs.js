@@ -6,7 +6,7 @@ import Pango from 'gi://Pango';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import {Key, Case, Corner, Layout, Mode, Click, Bound, Default, Slots, Functions} from './lib/settings.js';
+import {Key, Case, Corner, Layout, Mode, Click, Bound, Slots, Functions} from './lib/settings.js';
 
 const Label = Object.freeze({
     PAGE: 'Touch Board',
@@ -46,7 +46,6 @@ const Label = Object.freeze({
     BINDING_ROW: 'Override',
 });
 
-// Dropdown option lists, in gschema-enum order so the selected index maps straight onto the enum.
 /** @type {readonly {id: string, name: string}[]} */
 const Cases = Object.freeze([
     {id: Case.LOWER, name: 'lowercase'},
@@ -89,6 +88,17 @@ const Icon = Object.freeze({
     REMOVE: 'user-trash-symbolic',
 });
 
+const Style = Object.freeze({FLAT: 'flat'});
+
+const Signal = Object.freeze({
+    SELECTED: 'notify::selected',
+    ACTIVE: 'notify::active',
+    VALUE: 'notify::value',
+    FONT: 'notify::font-desc',
+    RGBA: 'notify::rgba',
+    CLICKED: 'clicked',
+});
+
 /** @typedef {import('gi://Gio').default.Settings} Settings */
 /** @typedef {{row: import('gi://Adw').default.ActionRow, slot: import('gi://Gtk').default.DropDown, fn: import('gi://Gtk').default.DropDown}} Binding */
 
@@ -114,12 +124,26 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
      */
     _appearance(settings) {
         const group = new Adw.PreferencesGroup({title: Label.APPEARANCE});
+        group.add(this._combo(settings, Key.LAYOUT, Label.LAYOUT_ROW, Label.LAYOUT_SUBTITLE, Layouts));
+        group.add(this._spin(settings, Key.HEIGHT, Label.HEIGHT_ROW, Label.HEIGHT_SUBTITLE,
+            {lower: Bound.HEIGHT_MIN, upper: Bound.HEIGHT_MAX, step: 1, page: 5}));
+        group.add(this._spin(settings, Key.SPACING, Label.SPACING_ROW, Label.SPACING_SUBTITLE,
+            {lower: Bound.SPACING_MIN, upper: Bound.SPACING_MAX, step: 1, page: 5}));
+        group.add(this._spin(settings, Key.GLYPH_SIZE, Label.GLYPH_ROW, Label.GLYPH_SUBTITLE,
+            {lower: Bound.GLYPH_MIN, upper: Bound.GLYPH_MAX, step: 1, page: 5}));
+        group.add(this._font(settings));
+        group.add(this._combo(settings, Key.CASE, Label.CASE_ROW, Label.CASE_SUBTITLE, Cases));
+        group.add(this._combo(settings, Key.CORNER, Label.CORNER_ROW, Label.CORNER_SUBTITLE, Corners));
+        group.add(this._switch(settings, Key.ROUNDED, Label.ROUNDED_ROW, Label.ROUNDED_SUBTITLE));
+        group.add(this._color(settings));
+        return group;
+    }
 
-        group.add(this._layout(settings));
-        group.add(this._height(settings));
-        group.add(this._spacing(settings));
-        group.add(this._glyphSize(settings));
-
+    /**
+     * @param {Settings} settings
+     * @returns {import('gi://Adw').default.ActionRow}
+     */
+    _font(settings) {
         const button = new Gtk.FontDialogButton({
             dialog: new Gtk.FontDialog(),
             level: Gtk.FontLevel.FAMILY,
@@ -130,30 +154,14 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
         if (family)
             button.set_font_desc(Pango.FontDescription.from_string(family));
 
-        button.connect('notify::font-desc', () => {
-            const description = button.get_font_desc();
-            settings.set_string(Key.FONT, description?.get_family() ?? '');
+        button.connect(Signal.FONT, () => {
+            settings.set_string(Key.FONT, button.get_font_desc().get_family());
         });
 
         const row = new Adw.ActionRow({title: Label.FONT_ROW, subtitle: Label.FONT_SUBTITLE});
         row.add_suffix(button);
         row.activatable_widget = button;
-        group.add(row);
-
-        group.add(this._case(settings));
-        group.add(this._corner(settings));
-
-        const rounded = new Adw.SwitchRow({
-            title: Label.ROUNDED_ROW,
-            subtitle: Label.ROUNDED_SUBTITLE,
-            active: settings.get_boolean(Key.ROUNDED),
-        });
-        rounded.connect('notify::active', () => settings.set_boolean(Key.ROUNDED, rounded.get_active()));
-        group.add(rounded);
-
-        group.add(this._color(settings));
-
-        return group;
+        return row;
     }
 
     /**
@@ -162,80 +170,28 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
      */
     _behaviour(settings) {
         const group = new Adw.PreferencesGroup({title: Label.BEHAVIOUR});
-
-        const row = new Adw.ComboRow({
-            title: Label.MODE_ROW,
-            subtitle: Label.MODE_SUBTITLE,
-            model: Gtk.StringList.new(Modes.map(entry => entry.name)),
-        });
-
-        const current = settings.get_string(Key.MODE);
-        const index = Modes.findIndex(entry => entry.id === current);
-        row.set_selected(index < 0 ? 0 : index);
-
-        row.connect('notify::selected', () => {
-            settings.set_string(Key.MODE, Modes[row.get_selected()].id);
-        });
-
-        group.add(row);
-
-        const accents = new Adw.SwitchRow({
-            title: Label.ACCENTS_ROW,
-            subtitle: Label.ACCENTS_SUBTITLE,
-            active: settings.get_boolean(Key.ACCENTS),
-        });
-        accents.connect('notify::active', () => settings.set_boolean(Key.ACCENTS, accents.get_active()));
-        group.add(accents);
-
+        group.add(this._combo(settings, Key.MODE, Label.MODE_ROW, Label.MODE_SUBTITLE, Modes));
+        group.add(this._switch(settings, Key.ACCENTS, Label.ACCENTS_ROW, Label.ACCENTS_SUBTITLE));
         return group;
     }
 
-    // Variant and volume rows follow the toggle's state, so they read as disabled while the click is off.
     /**
      * @param {Settings} settings
      * @returns {import('gi://Adw').default.PreferencesGroup}
      */
     _sound(settings) {
         const group = new Adw.PreferencesGroup({title: Label.SOUND});
+        const toggle = this._switch(settings, Key.CLICK, Label.CLICK_ROW, Label.CLICK_SUBTITLE);
+        const variant = this._combo(settings, Key.SOUND, Label.VARIANT_ROW, Label.VARIANT_SUBTITLE, Clicks);
+        const volume = this._spin(settings, Key.VOLUME, Label.VOLUME_ROW, Label.VOLUME_SUBTITLE,
+            {lower: Bound.VOLUME_MIN, upper: Bound.VOLUME_MAX, step: 5, page: 10});
 
-        const toggle = new Adw.SwitchRow({
-            title: Label.CLICK_ROW,
-            subtitle: Label.CLICK_SUBTITLE,
-            active: settings.get_boolean(Key.CLICK),
-        });
-
-        const variant = new Adw.ComboRow({
-            title: Label.VARIANT_ROW,
-            subtitle: Label.VARIANT_SUBTITLE,
-            model: Gtk.StringList.new(Clicks.map(entry => entry.name)),
-        });
-        const index = Clicks.findIndex(entry => entry.id === settings.get_string(Key.SOUND));
-        variant.set_selected(index < 0 ? 0 : index);
-        variant.connect('notify::selected', () => {
-            settings.set_string(Key.SOUND, Clicks[variant.get_selected()].id);
-        });
-
-        const volume = new Adw.SpinRow({
-            title: Label.VOLUME_ROW,
-            subtitle: Label.VOLUME_SUBTITLE,
-            adjustment: new Gtk.Adjustment({
-                lower: Bound.VOLUME_MIN,
-                upper: Bound.VOLUME_MAX,
-                step_increment: 5,
-                page_increment: 10,
-            }),
-        });
-        volume.set_value(settings.get_int(Key.VOLUME));
-        volume.connect('notify::value', () => settings.set_int(Key.VOLUME, volume.get_value()));
-
-        toggle.connect('notify::active', () => {
-            const on = toggle.get_active();
-            settings.set_boolean(Key.CLICK, on);
-            variant.sensitive = on;
-            volume.sensitive = on;
-        });
-        variant.sensitive = toggle.get_active();
-        volume.sensitive = toggle.get_active();
+        const gate = () => {
+            variant.sensitive = toggle.get_active();
+            volume.sensitive = toggle.get_active();
+        };
+        toggle.connect(Signal.ACTIVE, gate);
+        gate();
 
         group.add(toggle);
         group.add(variant);
@@ -245,64 +201,58 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
 
     /**
      * @param {Settings} settings
-     * @returns {import('gi://Adw').default.SpinRow}
+     * @param {string} key
+     * @param {string} title
+     * @param {string} subtitle
+     * @param {readonly {id: string, name: string}[]} entries
+     * @returns {import('gi://Adw').default.ComboRow}
      */
-    _height(settings) {
-        const row = new Adw.SpinRow({
-            title: Label.HEIGHT_ROW,
-            subtitle: Label.HEIGHT_SUBTITLE,
-            adjustment: new Gtk.Adjustment({
-                lower: Bound.HEIGHT_MIN,
-                upper: Bound.HEIGHT_MAX,
-                step_increment: 1,
-                page_increment: 5,
-            }),
+    _combo(settings, key, title, subtitle, entries) {
+        const row = new Adw.ComboRow({
+            title,
+            subtitle,
+            model: Gtk.StringList.new(entries.map(entry => entry.name)),
         });
-
-        row.set_value(settings.get_int(Key.HEIGHT));
-        row.connect('notify::value', () => settings.set_int(Key.HEIGHT, row.get_value()));
+        const current = settings.get_string(key);
+        row.set_selected(entries.findIndex(entry => entry.id === current));
+        row.connect(Signal.SELECTED, () => settings.set_string(key, entries[row.get_selected()].id));
         return row;
     }
 
     /**
      * @param {Settings} settings
+     * @param {string} key
+     * @param {string} title
+     * @param {string} subtitle
+     * @param {{lower: number, upper: number, step: number, page: number}} range
      * @returns {import('gi://Adw').default.SpinRow}
      */
-    _spacing(settings) {
+    _spin(settings, key, title, subtitle, range) {
         const row = new Adw.SpinRow({
-            title: Label.SPACING_ROW,
-            subtitle: Label.SPACING_SUBTITLE,
+            title,
+            subtitle,
             adjustment: new Gtk.Adjustment({
-                lower: Bound.SPACING_MIN,
-                upper: Bound.SPACING_MAX,
-                step_increment: 1,
-                page_increment: 5,
+                lower: range.lower,
+                upper: range.upper,
+                step_increment: range.step,
+                page_increment: range.page,
             }),
         });
-
-        row.set_value(settings.get_int(Key.SPACING));
-        row.connect('notify::value', () => settings.set_int(Key.SPACING, row.get_value()));
+        row.set_value(settings.get_int(key));
+        row.connect(Signal.VALUE, () => settings.set_int(key, row.get_value()));
         return row;
     }
 
     /**
      * @param {Settings} settings
-     * @returns {import('gi://Adw').default.SpinRow}
+     * @param {string} key
+     * @param {string} title
+     * @param {string} subtitle
+     * @returns {import('gi://Adw').default.SwitchRow}
      */
-    _glyphSize(settings) {
-        const row = new Adw.SpinRow({
-            title: Label.GLYPH_ROW,
-            subtitle: Label.GLYPH_SUBTITLE,
-            adjustment: new Gtk.Adjustment({
-                lower: Bound.GLYPH_MIN,
-                upper: Bound.GLYPH_MAX,
-                step_increment: 1,
-                page_increment: 5,
-            }),
-        });
-
-        row.set_value(settings.get_int(Key.GLYPH_SIZE));
-        row.connect('notify::value', () => settings.set_int(Key.GLYPH_SIZE, row.get_value()));
+    _switch(settings, key, title, subtitle) {
+        const row = new Adw.SwitchRow({title, subtitle, active: settings.get_boolean(key)});
+        row.connect(Signal.ACTIVE, () => settings.set_boolean(key, row.get_active()));
         return row;
     }
 
@@ -317,10 +267,10 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
         });
 
         const rgba = new Gdk.RGBA();
-        rgba.parse(settings.get_string(Key.COLOR) || Default.COLOR);
+        rgba.parse(settings.get_string(Key.COLOR));
         button.set_rgba(rgba);
 
-        button.connect('notify::rgba', () => {
+        button.connect(Signal.RGBA, () => {
             const colour = button.get_rgba();
             const hex = [colour.red, colour.green, colour.blue]
                 .map(channel => Math.round(channel * 255).toString(16).padStart(2, '0'))
@@ -334,73 +284,6 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
         return row;
     }
 
-    /**
-     * @param {Settings} settings
-     * @returns {import('gi://Adw').default.ComboRow}
-     */
-    _layout(settings) {
-        const row = new Adw.ComboRow({
-            title: Label.LAYOUT_ROW,
-            subtitle: Label.LAYOUT_SUBTITLE,
-            model: Gtk.StringList.new(Layouts.map(entry => entry.name)),
-        });
-
-        const current = settings.get_string(Key.LAYOUT);
-        const index = Layouts.findIndex(entry => entry.id === current);
-        row.set_selected(index < 0 ? 0 : index);
-
-        row.connect('notify::selected', () => {
-            settings.set_string(Key.LAYOUT, Layouts[row.get_selected()].id);
-        });
-
-        return row;
-    }
-
-    /**
-     * @param {Settings} settings
-     * @returns {import('gi://Adw').default.ComboRow}
-     */
-    _case(settings) {
-        const row = new Adw.ComboRow({
-            title: Label.CASE_ROW,
-            subtitle: Label.CASE_SUBTITLE,
-            model: Gtk.StringList.new(Cases.map(entry => entry.name)),
-        });
-
-        const current = settings.get_string(Key.CASE);
-        const index = Cases.findIndex(entry => entry.id === current);
-        row.set_selected(index < 0 ? 0 : index);
-
-        row.connect('notify::selected', () => {
-            settings.set_string(Key.CASE, Cases[row.get_selected()].id);
-        });
-
-        return row;
-    }
-
-    /**
-     * @param {Settings} settings
-     * @returns {import('gi://Adw').default.ComboRow}
-     */
-    _corner(settings) {
-        const row = new Adw.ComboRow({
-            title: Label.CORNER_ROW,
-            subtitle: Label.CORNER_SUBTITLE,
-            model: Gtk.StringList.new(Corners.map(entry => entry.name)),
-        });
-
-        const current = settings.get_string(Key.CORNER);
-        const index = Corners.findIndex(entry => entry.id === current);
-        row.set_selected(index < 0 ? 0 : index);
-
-        row.connect('notify::selected', () => {
-            settings.set_string(Key.CORNER, Corners[row.get_selected()].id);
-        });
-
-        return row;
-    }
-
-    // Rows serialise to the fkeys dict on every change; a slot with no row keeps its default F-key.
     /**
      * @param {Settings} settings
      * @returns {import('gi://Adw').default.PreferencesGroup}
@@ -441,7 +324,7 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
             fn.set_selected(functionIndex < 0 ? 0 : functionIndex);
 
             const remove = new Gtk.Button({icon_name: Icon.REMOVE, valign: Gtk.Align.CENTER});
-            remove.add_css_class('flat');
+            remove.add_css_class(Style.FLAT);
 
             const row = new Adw.ActionRow({title: Label.BINDING_ROW});
             row.add_prefix(slot);
@@ -452,9 +335,9 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
             const binding = {row, slot, fn};
             bindings.push(binding);
 
-            slot.connect('notify::selected', persist);
-            fn.connect('notify::selected', persist);
-            remove.connect('clicked', () => {
+            slot.connect(Signal.SELECTED, persist);
+            fn.connect(Signal.SELECTED, persist);
+            remove.connect(Signal.CLICKED, () => {
                 group.remove(row);
                 bindings.splice(bindings.indexOf(binding), 1);
                 persist();
@@ -462,8 +345,8 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
         };
 
         const add = new Gtk.Button({icon_name: Icon.ADD, valign: Gtk.Align.CENTER});
-        add.add_css_class('flat');
-        add.connect('clicked', () => {
+        add.add_css_class(Style.FLAT);
+        add.connect(Signal.CLICKED, () => {
             addBinding(Slots[0].id, Functions[0].id);
             persist();
         });

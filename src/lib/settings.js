@@ -1,6 +1,5 @@
 import {Code} from './codes.js';
 
-// Shared GSettings identifiers for the extension and its preferences.
 export const Key = Object.freeze({
     FONT: 'font',
     FKEYS: 'fkeys',
@@ -19,12 +18,8 @@ export const Key = Object.freeze({
     VOLUME: 'click-volume',
 });
 
-// Fallbacks when a settings read yields no value.
-// COLOR mirrors the gschema default for active-color, so an empty read cannot diverge from it.
 export const Default = Object.freeze({COLOR: '#8a8a8e'});
 
-// Clamp bounds for the integer percent settings (height of the display,
-// key spacing, glyph size and click volume). Must mirror the gschema <range> on each key.
 export const Bound = Object.freeze({
     HEIGHT_MIN: 18,
     HEIGHT_MAX: 60,
@@ -36,8 +31,6 @@ export const Bound = Object.freeze({
     VOLUME_MAX: 100,
 });
 
-// Values mirror the gschema enum nicks; player.js keys its synthesis table on them,
-// and prefs maps the dropdown index to the same order.
 export const Click = Object.freeze({
     THOCK: 'thock',
     CLICK: 'click',
@@ -45,44 +38,30 @@ export const Click = Object.freeze({
     POP: 'pop',
 });
 
-// gschema enum nicks. Affects static key faces only;
-// typed glyphs follow the active layout and Shift.
 export const Case = Object.freeze({
     LOWER: 'lowercase',
     TITLE: 'titlecase',
     UPPER: 'uppercase',
 });
 
-// gschema enum nicks for the key-corner roundness. Soft is the stylesheet's 6px base;
-// sharp and round are root-class overrides applied by keyboard.js _applyShape.
 export const Corner = Object.freeze({
     SHARP: 'sharp',
     SOFT: 'soft',
     ROUND: 'round',
 });
 
-// gschema enum nicks indexing the geometry profile map.
-// Alphabetic nicks (not bare percentages) keep the schema compiler happy.
 export const Layout = Object.freeze({
     COMPACT: 'compact',
     STANDARD: 'standard',
     FULL: 'full',
 });
 
-// How a soft modifier responds to a tap (gschema enum nicks).
-// HOLD: tap = one keystroke (lone Super opens the overview), long press = lock,
-// tap on a lock clears it.
-// LATCH (Gboard): tap = one-shot on the next keystroke, double tap = lock,
-// tap on either clears it.
-// TOGGLE: every tap flips a lock.
 export const Mode = Object.freeze({
     HOLD: 'hold',
     LATCH: 'latch',
     TOGGLE: 'toggle',
 });
 
-// Reassignable function-row slots, left to right: each slot's default evdev code and face.
-// Only F1-F12 are remappable; Esc, PrtSc, Del and the hide key stay fixed.
 /** @typedef {{id: string, label: string, code: number}} Slot */
 /** @type {readonly Slot[]} */
 export const Slots = Object.freeze([
@@ -100,8 +79,6 @@ export const Slots = Object.freeze([
     {id: 'f12', label: 'F12', code: Code.F12},
 ]);
 
-// Functions a slot can be reassigned to. `name` labels the prefs dropdown,
-// `face` draws on the key.
 /** @typedef {{id: string, name: string, face: string, code: number}} FunctionSpec */
 /** @type {readonly FunctionSpec[]} */
 export const Functions = Object.freeze([
@@ -131,9 +108,6 @@ export function functionFor(id) {
     return Functions.find(entry => entry.id === id);
 }
 
-// What each slot taps while Fn is engaged (Keychron media row).
-// A slot with no entry keeps its F-key under Fn; a user override beats Fn entirely.
-// Mctl/Srch have no universal Linux action and may be inert.
 /** @typedef {{slot: string, face: string, code: number}} MediaSpec */
 /** @type {readonly MediaSpec[]} */
 export const Media = Object.freeze([

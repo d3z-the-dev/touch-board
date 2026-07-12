@@ -10,9 +10,9 @@ import {Code, Kind} from './codes.js';
 import {profiles} from './geometry.js';
 import {glyphFor, supports, cjk} from './labels.js';
 import {accentsFor} from './accents.js';
-import {Key, Case, Bound, Corner, Layout, functionFor, mediaFor} from './settings.js';
+import {Key, Case, Corner, functionFor, mediaFor} from './settings.js';
 import {accentStyle} from './palette.js';
-import {BASE_FONT, clamp, percentScale, solveFontSize, innerWidth, rowMetrics, trayPadding} from './metrics.js';
+import {BASE_FONT, percentScale, solveFontSize, innerWidth, rowMetrics, trayPadding} from './metrics.js';
 import {Row} from './row.js';
 import {track} from './tracker.js';
 import {Chooser} from './chooser.js';
@@ -41,8 +41,6 @@ const Style = Object.freeze({
     LOCKED: 'touch-board-locked',
 });
 
-// CSS pseudo-classes toggled at runtime: ACTIVE is the pressed/armed look (distinct from Style.ACTIVE),
-// RESTYLE forces a stylesheet re-read.
 const Pseudo = Object.freeze({ACTIVE: 'active', RESTYLE: 'restyle'});
 
 const Signal = Object.freeze({
@@ -51,16 +49,13 @@ const Signal = Object.freeze({
     MAPPED: 'notify::mapped',
     CLICKED: 'clicked',
     DESTROY: 'destroy',
+    DISMISS: 'dismiss',
 });
 
-// Press-hold threshold (ms): locks a Hold-mode modifier, opens a key's accent popup.
 const Hold = Object.freeze({DELAY: 360});
 
-// Fallback auto-repeat timings (ms) when the desktop schema gives none;
-// INTERVAL is floored so a misconfigured setting cannot spin the main loop.
 const Repeat = Object.freeze({DELAY: 400, INTERVAL: 40, FLOOR: 20});
 
-// Desktop schema owning the hardware key-repeat cadence, mirrored on-screen.
 const Peripheral = Object.freeze({
     SCHEMA: 'org.gnome.desktop.peripherals.keyboard',
     REPEAT: 'repeat',
@@ -68,28 +63,16 @@ const Peripheral = Object.freeze({
     INTERVAL: 'repeat-interval',
 });
 
-// The stylesheet's .touch-board rule holds the full font fallback chain, led by this default family.
-// St ignores a multi-value inline font-family, so a custom family goes inline as one name,
-// and the default sets no inline family.
 const FALLBACK_HEAD = 'IBM Plex Sans';
 
-// Tone split for _styleFor: typed glyphs, space, the arrow cluster, and the numpad's
-// digit/operator tiles wear the lighter tile; other keys the darker functional tone.
-// These sets carry the exceptions — glyph keys that read as punctuation (dark), and
-// non-glyph keys that read as input (light, incl. the numpad operators). PAD-kind tiles
-// are caught by kind directly; a per-spec `light` flag forces the tile for functional
-// keys grouped into the numpad block (its media row, Hide, Num) without recolouring
-// the same kinds in other layouts.
-const DARK_KEYS = Object.freeze(new Set(/** @type {number[]} */ ([Code.GRAVE, Code.BACKSLASH, Code.SLASH])));
-const LIGHT_KEYS = Object.freeze(new Set(/** @type {number[]} */ ([
+/** @type {ReadonlySet<number>} */
+const DARK_KEYS = new Set([Code.GRAVE, Code.BACKSLASH, Code.SLASH]);
+/** @type {ReadonlySet<number>} */
+const LIGHT_KEYS = new Set([
     Code.SPACE, Code.UP, Code.DOWN, Code.LEFT, Code.RIGHT,
     Code.KPSLASH, Code.KPASTERISK, Code.KPMINUS, Code.KPPLUS, Code.KPENTER,
-])));
+]);
 
-// _init is the GObject constructor; checkJs sees it as a plain method, so all fields widen to T | undefined.
-// Methods cast fields to narrowed locals.
-
-// A glyph key carries its spec so _paint can refresh the face from the active layout.
 /** @typedef {St.Button & {_spec: import('./geometry.js').KeySpec}} KeyButton */
 
 /** @typedef {{button: St.Button, numeric: import('./geometry.js').Face, nav: import('./geometry.js').NavFace, span: number}} PadKey */
@@ -99,7 +82,7 @@ const LIGHT_KEYS = Object.freeze(new Set(/** @type {number[]} */ ([
 /** @typedef {{slot: string, button: St.Button, base: number, label: string, code: number, override: boolean}} FunctionKey */
 
 export const Keyboard = GObject.registerClass({
-    Signals: {'dismiss': {}},
+    Signals: {[Signal.DISMISS]: {}},
 },
 class Keyboard extends St.BoxLayout {
     /**
@@ -124,8 +107,6 @@ class Keyboard extends St.BoxLayout {
         this._pads = [];
         /** @type {St.Button | null} */
         this._numKey = null;
-        // Numpad mode: true types digits, false navigates. Each face injects its own evdev code,
-        // so the mode is local and independent of the system Num Lock.
         this._numeric = true;
         /** @type {KeyButton[]} */
         this._glyphs = [];
@@ -137,8 +118,6 @@ class Keyboard extends St.BoxLayout {
         this._faces = [];
         /** @type {Set<number>} */
         this._timers = new Set();
-        // Per-key cancel callbacks: stop auto-repeat and clear _track press state,
-        // so a forced reset (lowering under a held finger) cannot strand a key down or repeating.
         /** @type {(() => void)[]} */
         this._tracked = [];
         /** @type {Connection[]} */
@@ -202,9 +181,6 @@ class Keyboard extends St.BoxLayout {
         this._connect(settings, `changed::${Key.ROUNDED}`, () => this._applyShape());
         this._connect(settings, `changed::${Key.LAYOUT}`, () => this._rebuild());
         this._connect(this, Signal.SHOW, () => this._fit());
-        // Before the keyboard maps, the theme cascade has not resolved, so faces paint default black.
-        // Re-asserting the style on map repaints every face in its themed colour at once;
-        // it runs on every map, so a reopen lands styled too.
         this._connect(this, Signal.MAPPED, () => {
             if (this.mapped)
                 this._restyle();
@@ -217,7 +193,6 @@ class Keyboard extends St.BoxLayout {
         this._relabel();
     }
 
-    // Track a signal connection so release() can drop them all in one pass.
     /**
      * @param {GObject.Object} source
      * @param {string} signal
@@ -225,37 +200,32 @@ class Keyboard extends St.BoxLayout {
      * @returns {number}
      */
     _connect(source, signal, callback) {
-        const connections = /** @type {Connection[]} */ (this._connections);
         const id = source.connect(signal, callback);
-        connections.push({source, id});
+        this._connections.push({source, id});
         return id;
     }
 
     /** @returns {import('./geometry.js').KeySpec[][]} */
     _profile() {
-        const settings = /** @type {Settings} */ (this._settings);
-        return profiles[settings.get_string(Key.LAYOUT)] ?? profiles[Layout.STANDARD];
+        return profiles[this._settings.get_string(Key.LAYOUT)];
     }
 
     _build() {
         const definition = this._profile();
         const total = Math.max(...definition.map(line => line.reduce((sum, spec) => sum + spec.span, 0)));
         this._total = total;
-        const collected = /** @type {InstanceType<typeof Row>[]} */ (this._rows);
         for (const line of definition) {
             const row = new Row(total);
             for (const spec of line)
                 row.append(spec.kind === Kind.SPACER ? new St.Widget() : this._makeKey(spec), spec.span, spec.rows ?? 1);
             this.add_child(row);
-            collected.push(row);
+            this._rows.push(row);
         }
         this._paintNum();
     }
 
-    // Swap the active profile: drop and rebuild every row, then re-run case/fit/caps.
-    // The bridge repositions off the refit's height change, so none is needed here.
     _rebuild() {
-        for (const row of /** @type {InstanceType<typeof Row>[]} */ (this._rows))
+        for (const row of this._rows)
             row.destroy();
         this._rows = [];
         this._glyphs = [];
@@ -265,8 +235,8 @@ class Keyboard extends St.BoxLayout {
         this._pads = [];
         this._numKey = null;
         this._tracked = [];
-        /** @type {Modifiers} */ (this._modifiers).clear();
-        /** @type {FnLayer} */ (this._fnLayer).clear();
+        this._modifiers.clear();
+        this._fnLayer.clear();
         this._capsKey = null;
         this._build();
         this._applyCase();
@@ -275,60 +245,37 @@ class Keyboard extends St.BoxLayout {
         this._relabel();
     }
 
-    // The inter-key gutter scale (the `spacing` setting): 1 keeps the default gutter,
-    // lower tightens it. Multiplied into both the allocated gap and the label-fit budget.
     /** @returns {number} */
     _spacing() {
-        const settings = /** @type {Settings} */ (this._settings);
-        return percentScale(settings.get_int(Key.SPACING), Bound.SPACING_MIN, Bound.SPACING_MAX);
+        return percentScale(this._settings.get_int(Key.SPACING));
     }
 
-    // Key-glyph font scale (`glyph-size` setting): applied to the root font-size,
-    // so every em label tier scales together, while pixel key geometry stays on fit size.
     /** @returns {number} */
     _glyphScale() {
-        const settings = /** @type {Settings} */ (this._settings);
-        return percentScale(settings.get_int(Key.GLYPH_SIZE), Bound.GLYPH_MIN, Bound.GLYPH_MAX);
+        return percentScale(this._settings.get_int(Key.GLYPH_SIZE));
     }
 
-    // Size each row from the root font-size so the keyboard scales as a whole.
     _applyMetrics() {
-        const collected = /** @type {InstanceType<typeof Row>[]} */ (this._rows);
-        const {height, gap} = rowMetrics(
-            /** @type {number} */ (this._fontSize),
-            /** @type {boolean} */ (this._tight),
-            this._spacing());
-        for (const row of collected)
+        const {height, gap} = rowMetrics(this._fontSize, this._tight, this._spacing());
+        for (const row of this._rows)
             row.setMetrics(height, gap);
     }
 
-    // Pick each named key's face: the cased word when the fitted tile renders it in full,
-    // else the compact symbol (a word St would clip to an ellipsis is rejected).
     _applyFaces() {
-        const faces = /** @type {FaceKey[]} */ (this._faces);
         if (!Main.layoutManager.primaryMonitor)
             return;
-        const active = /** @type {FnLayer} */ (this._fnLayer).active();
-        for (const face of faces) {
-            const inner = this._inner(face.span);
+        const active = this._fnLayer.active();
+        for (const face of this._faces) {
             if (face.fn)
                 this._fnScale(face.button, active, false);
-            let next;
-            if (active && face.fn) {
-                const word = this._transform(face.fn.face);
-                next = face.fn.symbol !== undefined && !this._fits(face.button, word, inner)
-                    ? face.fn.symbol
-                    : word;
-            } else {
-                const word = this._transform(face.word);
-                next = this._fits(face.button, word, inner) ? word : face.symbol;
-            }
+            const next = active && face.fn
+                ? this._fitFace(face.button, face.fn.face, face.fn.symbol, face.span)
+                : this._fitFace(face.button, face.word, face.symbol, face.span);
             if (face.button.label !== next)
                 face.button.set_label(next);
         }
     }
 
-    // Inner width available for a label: the key's span in units, less the em gutters.
     /**
      * @param {number} span
      * @returns {number}
@@ -339,17 +286,14 @@ class Keyboard extends St.BoxLayout {
             return 0;
         return innerWidth({
             monitorWidth: monitor.width,
-            fontSize: /** @type {number} */ (this._fontSize),
-            tight: /** @type {boolean} */ (this._tight),
-            total: /** @type {number} */ (this._total),
+            fontSize: this._fontSize,
+            tight: this._tight,
+            total: this._total,
             spacing: this._spacing(),
             span,
         });
     }
 
-    // Whether the word renders within the tile, measured on the button so themed padding counts.
-    // The candidate is set only to measure, then the prior label restored,
-    // so the method is a pure query and the caller owns the committed face.
     /**
      * @param {St.Button} button
      * @param {string} word
@@ -360,32 +304,37 @@ class Keyboard extends St.BoxLayout {
         const current = button.label;
         button.set_label(word);
         const [, natural] = button.get_preferred_width(-1);
-        button.set_label(current ?? '');
+        button.set_label(current);
         return natural <= inner;
     }
 
-    // Refit to geometry: the height percent of the short screen edge sets the root font-size,
-    // giving one physical size in both orientations; text and keys scale together.
-    // A portrait aspect flags the tight class so the stylesheet trims gutters.
+    /**
+     * @param {St.Button} button
+     * @param {string} word
+     * @param {string | undefined} symbol
+     * @param {number} span
+     * @returns {string} The case-transformed word, or the symbol when the word will not fit.
+     */
+    _fitFace(button, word, symbol, span) {
+        const face = this._transform(word);
+        if (symbol === undefined)
+            return face;
+        return this._fits(button, face, this._inner(span)) ? face : symbol;
+    }
+
     _fit() {
         const monitor = Main.layoutManager.primaryMonitor;
         if (!monitor)
             return;
-        const settings = /** @type {Settings} */ (this._settings);
-        const percent = clamp(settings.get_int(Key.HEIGHT), Bound.HEIGHT_MIN, Bound.HEIGHT_MAX);
-        const collected = /** @type {InstanceType<typeof Row>[]} */ (this._rows);
         const {fontSize, tight} = solveFontSize({
             monitorWidth: monitor.width,
             monitorHeight: monitor.height,
-            percent,
-            rows: collected.length,
-            total: /** @type {number} */ (this._total),
+            percent: this._settings.get_int(Key.HEIGHT),
+            rows: this._rows.length,
+            total: this._total,
         });
         this._fontSize = fontSize;
         this._tight = tight;
-        // Pin the board to monitor width:
-        // the GNOME-owned keyboardBox can keep the previous orientation's wider width after a rotate-while-open.
-        // Owning the width (x_align START) matches the basis _inner()/_fits() assume.
         this.set_width(monitor.width);
         if (this._tight)
             this.add_style_class_name(Style.TIGHT);
@@ -397,15 +346,12 @@ class Keyboard extends St.BoxLayout {
         this._applyPads();
     }
 
-    // Public entry for an orientation change; re-solves geometry whether shown or hidden.
     refit() {
         this._fit();
     }
 
-    // Corner shape from `corner` (per-key) and `rounded` (tray) settings as root classes.
-    // Soft keys and rounded tray are the CSS base (no class); pure CSS needs no refit.
     _applyShape() {
-        const settings = /** @type {Settings} */ (this._settings);
+        const settings = this._settings;
         const corner = settings.get_string(Key.CORNER);
         this.remove_style_class_name(Style.SHARP);
         this.remove_style_class_name(Style.ROUND);
@@ -419,8 +365,6 @@ class Keyboard extends St.BoxLayout {
             this.add_style_class_name(Style.FLAT);
     }
 
-    // Force every face to re-pull its themed colour (not resolved before first map):
-    // toggling a root pseudo-class invalidates the subtree, ensure_style settles it now.
     _restyle() {
         this.add_style_pseudo_class(Pseudo.RESTYLE);
         this.remove_style_pseudo_class(Pseudo.RESTYLE);
@@ -440,9 +384,7 @@ class Keyboard extends St.BoxLayout {
      * @returns {St.Button}
      */
     _makeKey(spec) {
-        const glyphs = /** @type {KeyButton[]} */ (this._glyphs);
-        const fkeys = /** @type {FunctionKey[]} */ (this._fkeys);
-        const modifiers = /** @type {Modifiers} */ (this._modifiers);
+        const modifiers = this._modifiers;
         const button = /** @type {KeyButton} */ (new St.Button({
             style_class: this._styleFor(spec),
             can_focus: false,
@@ -451,11 +393,9 @@ class Keyboard extends St.BoxLayout {
         }));
         button._spec = spec;
 
-        // A numpad key owns both faces (swapped by _applyPads) and joins no other collection.
         if (spec.pad) {
-            const pads = /** @type {PadKey[]} */ (this._pads);
             const entry = {button, numeric: spec.pad.numeric, nav: spec.pad.nav, span: spec.span};
-            pads.push(entry);
+            this._pads.push(entry);
             button.set_label(this._numeric ? entry.numeric.face : entry.nav.symbol);
             this._wirePad(button, entry);
             return button;
@@ -463,17 +403,13 @@ class Keyboard extends St.BoxLayout {
 
         if (spec.glyph) {
             button.set_label('');
-            glyphs.push(button);
+            this._glyphs.push(button);
         } else if (spec.symbol) {
-            // A word/symbol key: _applyFaces owns its label.
-            const faces = /** @type {FaceKey[]} */ (this._faces);
-            faces.push({button, word: spec.label ?? '', symbol: spec.symbol, span: spec.span, fn: spec.fn});
+            this._faces.push({button, word: spec.label ?? '', symbol: spec.symbol, span: spec.span, fn: spec.fn});
         } else {
             const label = spec.label ?? '';
-            // A reassignable F-key's face is owned by _applyFunctions; other statics are cased here.
             if (label && !spec.fslot) {
-                const statics = /** @type {{button: St.Button, base: string}[]} */ (this._statics);
-                statics.push({button, base: label});
+                this._statics.push({button, base: label});
                 button.set_label(this._transform(label));
             } else {
                 button.set_label(label);
@@ -481,7 +417,7 @@ class Keyboard extends St.BoxLayout {
         }
 
         if (spec.kind === Kind.MODIFIER) {
-            /** @type {(() => void)[]} */ (this._tracked).push(modifiers.wire(spec, button));
+            this._tracked.push(modifiers.wire(spec.code, button));
         } else if (spec.kind === Kind.NUM) {
             this._numKey = button;
             button.connect(Signal.CLICKED, () => {
@@ -489,15 +425,15 @@ class Keyboard extends St.BoxLayout {
                 this._toggleNum();
             });
         } else if (spec.kind === Kind.FN) {
-            /** @type {(() => void)[]} */ (this._tracked).push(/** @type {FnLayer} */ (this._fnLayer).wire(button));
-        } else if (spec.fslot && spec.code !== undefined && spec.label !== undefined) {
+            this._tracked.push(this._fnLayer.wire(button));
+        } else if (spec.fslot) {
             const entry = {slot: spec.fslot, button, base: spec.code, label: spec.label, code: spec.code, override: false};
-            fkeys.push(entry);
+            this._fkeys.push(entry);
             button.connect(Signal.CLICKED, () => {
                 this._click();
                 modifiers.tap(this._functionCode(entry));
             });
-        } else if (spec.kind === Kind.KEY && spec.code !== undefined) {
+        } else if (spec.kind === Kind.KEY) {
             this._wireKey(spec, button);
         } else {
             if (spec.kind === Kind.LOCK && spec.code === Code.CAPS)
@@ -507,15 +443,10 @@ class Keyboard extends St.BoxLayout {
         return button;
     }
 
-    // Map each reassignable F-key to the code and face it shows now. Priority:
-    // a user override beats the Fn-layer media function, which beats the default F-key.
-    // _functionCode resolves the same order at tap time so face and keystroke agree.
     _applyFunctions() {
-        const settings = /** @type {Settings} */ (this._settings);
-        const fkeys = /** @type {FunctionKey[]} */ (this._fkeys);
-        const map = /** @type {Record<string, string>} */ (settings.get_value(Key.FKEYS).deep_unpack());
-        const active = /** @type {FnLayer} */ (this._fnLayer).active();
-        for (const entry of fkeys) {
+        const map = /** @type {Record<string, string>} */ (this._settings.get_value(Key.FKEYS).deep_unpack());
+        const active = this._fnLayer.active();
+        for (const entry of this._fkeys) {
             const id = map[entry.slot];
             const assigned = id ? functionFor(id) : undefined;
             entry.override = assigned !== undefined;
@@ -533,7 +464,6 @@ class Keyboard extends St.BoxLayout {
         }
     }
 
-    // The code an F-key taps now, resolving the same priority _applyFunctions paints.
     /**
      * @param {FunctionKey} entry
      * @returns {number}
@@ -541,13 +471,11 @@ class Keyboard extends St.BoxLayout {
     _functionCode(entry) {
         if (entry.override)
             return entry.code;
-        if (/** @type {FnLayer} */ (this._fnLayer).active())
+        if (this._fnLayer.active())
             return mediaFor(entry.slot)?.code ?? entry.code;
         return entry.code;
     }
 
-    // Bind a key's gesture handling (see tracker.track), supplying the press cue and pseudo-class,
-    // so the tracker owns no keyboard state.
     /**
      * @param {St.Button} button
      * @param {() => void} onDown
@@ -559,9 +487,6 @@ class Keyboard extends St.BoxLayout {
         return track(button, {onDown, onUp, onMove, click: () => this._click(), active: Pseudo.ACTIVE});
     }
 
-    // Repaint everything the Fn layer governs after a layer switch (the FnLayer's injected repaint):
-    // glyph faces, named faces, the function row, then the tray.
-    // The tray clears any ghost the off-layer face leaves behind when a label shrinks.
     _fnRepaint() {
         this._paint();
         this._applyFaces();
@@ -569,35 +494,25 @@ class Keyboard extends St.BoxLayout {
         this.queue_redraw();
     }
 
-    // A typing key. The base glyph is committed on press for an immediate, uniform response;
-    // a letter with accent variants also arms a long-press popup whose pick replaces the base.
-    // A non-accent key auto-repeats while held.
     /**
      * @param {import('./geometry.js').KeySpec} spec
      * @param {St.Button} button
      */
     _wireKey(spec, button) {
         const code = spec.code;
-        if (code === undefined)
-            return;
-        const timers = /** @type {Set<number>} */ (this._timers);
-        const chooser = /** @type {Chooser} */ (this._chooser);
-        const composer = /** @type {Composer} */ (this._composer);
-        const modifiers = /** @type {Modifiers} */ (this._modifiers);
-        const fnLayer = /** @type {FnLayer} */ (this._fnLayer);
+        const timers = this._timers;
+        const chooser = this._chooser;
+        const composer = this._composer;
+        const modifiers = this._modifiers;
+        const fnLayer = this._fnLayer;
         let hold = 0;
         let opened = false;
-        // Code frozen at press (honouring Fn) so a one-shot Fn consumed mid-hold does not flip the repeat to the base key.
         let active = code;
         /** @type {{label: string, keyval: number}[] | null} */
         let accents = null;
-        // Reassigned each press to the actuation kind (compose/stub/base);
-        // the repeater reads it through the wrapper, so a held key repeats whatever it committed.
         let fire = () => modifiers.tap(active);
         const repeat = this._repeater(() => fire());
 
-        // The accent-popup-open timer is mutually exclusive with auto-repeat (only one arms per press);
-        // clearing it and the repeater covers every in-flight source.
         const stopHold = () => {
             if (hold) {
                 GLib.source_remove(hold);
@@ -613,73 +528,60 @@ class Keyboard extends St.BoxLayout {
         const down = () => {
             opened = false;
             stop();
-            const settings = /** @type {Settings} */ (this._settings);
             active = fnLayer.active() && spec.fn ? spec.fn.code : code;
-            // A CJK source composes in the input method: send the keysym for the engine,
-            // never an evdev code (xkb would give the bare Latin position);
-            // never auto-repeat or open the Latin accent popup, both meaningless mid-composition.
             const compose = spec.glyph && !fnLayer.active() && composer.composes();
-            // A CJK source with no engine is a bare us stub: type the us-position keysym,
-            // so the face matches the output on any underlying xkb.
             const stub = spec.glyph && !fnLayer.active() && !compose && composer.stub();
-            // Accents belong to the plain Latin layer only: under Fn the key is a function,
-            // under composition the IME owns it, and a us stub is bare Latin.
-            accents = spec.glyph && !fnLayer.active() && !compose && !stub && settings.get_boolean(Key.ACCENTS)
-                ? accentsFor(this._faceOf(spec))
+            accents = spec.glyph && !fnLayer.active() && !compose && !stub && this._settings.get_boolean(Key.ACCENTS)
+                ? accentsFor(this._faceOf(code))
                 : null;
-            // Commit the base on press so every key responds immediately;
-            // a fast roll preserves keystroke order, and an accent popup later replaces it (see below).
-            fire = compose ? () => composer.compose(spec) : stub ? () => composer.stubKey(spec) : () => modifiers.tap(active);
+            if (compose)
+                fire = () => composer.compose(code);
+            else if (stub)
+                fire = () => composer.stubKey(code);
+            else
+                fire = () => modifiers.tap(active);
             fire();
             if (accents) {
-                // The base is typed; a long press opens the variant popup, whose pick replaces it (see _select).
-                // An accent key does not auto-repeat.
                 hold = GLib.timeout_add(GLib.PRIORITY_DEFAULT, Hold.DELAY, () => {
                     timers.delete(hold);
                     hold = 0;
                     opened = true;
-                    chooser.open(button, /** @type {{label: string, keyval: number}[]} */ (accents));
+                    chooser.open(button, accents);
                     return GLib.SOURCE_REMOVE;
                 });
                 timers.add(hold);
             } else if (!compose) {
-                // A held non-accent key auto-repeats; a composed keystroke never repeats.
                 repeat.start();
             }
         };
 
-        // The popup-opening key keeps the finger's grab, so its stream drives the slide:
-        // highlight the variant under the finger; release off the row leaves the popup up.
-        const move = (/** @type {number} */ x, /** @type {number} */ y) => {
+        /** @type {(x: number, y: number) => void} */
+        const move = (x, y) => {
             if (opened)
                 chooser.focus(x, y);
         };
 
-        const up = (/** @type {number} */ x, /** @type {number} */ y) => {
+        /** @type {(x: number, y: number) => void} */
+        const up = (x, y) => {
             stop();
-            // The base was committed on press;
-            // on release only an open popup needs resolving (a pick replaces the base,
-            // a release off the row leaves it up).
             if (opened)
                 chooser.selectAt(x, y);
         };
 
         const cancel = this._track(button, down, up, move);
-        /** @type {(() => void)[]} */ (this._tracked).push(() => {
+        this._tracked.push(() => {
             stop();
             cancel();
         });
         button.connect(Signal.DESTROY, stop);
     }
 
-    // A numpad key: taps on press and auto-repeats while held,
-    // injecting the active face's code resolved at each fire so a Num toggle mid-hold is honoured.
     /**
      * @param {St.Button} button
      * @param {PadKey} entry
      */
     _wirePad(button, entry) {
-        const modifiers = /** @type {Modifiers} */ (this._modifiers);
+        const modifiers = this._modifiers;
         const fire = () => {
             const code = this._numeric ? entry.numeric.code : entry.nav.code;
             if (code !== undefined)
@@ -694,21 +596,19 @@ class Keyboard extends St.BoxLayout {
         };
 
         const cancel = this._track(button, down, () => repeat.stop());
-        /** @type {(() => void)[]} */ (this._tracked).push(() => {
+        this._tracked.push(() => {
             repeat.stop();
             cancel();
         });
         button.connect(Signal.DESTROY, () => repeat.stop());
     }
 
-    // Respects the desktop repeat delay, interval, and repeat-enabled toggle.
-    // Both timers register in _timers so a teardown mid-hold cannot strand one.
     /**
      * @param {() => void} fire
      * @returns {{start: () => void, stop: () => void}}
      */
     _repeater(fire) {
-        const timers = /** @type {Set<number>} */ (this._timers);
+        const timers = this._timers;
         let hold = 0;
         let interval = 0;
         const stop = () => {
@@ -724,7 +624,7 @@ class Keyboard extends St.BoxLayout {
             }
         };
         const start = () => {
-            if (!(/** @type {Gio.Settings} */ (this._repeat).get_boolean(Peripheral.REPEAT)))
+            if (!this._repeat.get_boolean(Peripheral.REPEAT))
                 return;
             hold = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this._repeatDelay(), () => {
                 timers.delete(hold);
@@ -743,44 +643,36 @@ class Keyboard extends St.BoxLayout {
 
     /** @returns {number} */
     _repeatDelay() {
-        const value = /** @type {Gio.Settings} */ (this._repeat).get_uint(Peripheral.DELAY);
+        const value = this._repeat.get_uint(Peripheral.DELAY);
         return value > 0 ? value : Repeat.DELAY;
     }
 
     /** @returns {number} */
     _repeatInterval() {
-        const value = /** @type {Gio.Settings} */ (this._repeat).get_uint(Peripheral.INTERVAL);
+        const value = this._repeat.get_uint(Peripheral.INTERVAL);
         return Math.max(value > 0 ? value : Repeat.INTERVAL, Repeat.FLOOR);
     }
 
-    // The layout id the keys wear.
-    // A CJK source with no active engine is a bare us stub (its native faces assume an engine),
-    // so it falls back to us; others show own.
     /** @returns {string} */
     _faceId() {
-        const language = /** @type {Language} */ (this._language);
+        const language = this._language;
         const id = language.currentId();
         return !language.composing() && cjk(id) ? 'us' : id;
     }
 
     /**
-     * @param {import('./geometry.js').KeySpec} spec
+     * @param {number} code
      * @returns {string}
      */
-    _faceOf(spec) {
-        const code = spec.code;
-        if (code === undefined)
-            return '';
-        const modifiers = /** @type {Modifiers} */ (this._modifiers);
-        return glyphFor(this._faceId(), code, {shift: modifiers.shifted(), altgr: modifiers.altgr()});
+    _faceOf(code) {
+        return glyphFor(this._faceId(), code, {shift: this._modifiers.shifted(), altgr: this._modifiers.altgr()});
     }
 
-    // Reflect the real Caps Lock state from the shared keymap (here or a physical key).
     _syncCaps() {
-        const caps = /** @type {St.Button | null} */ (this._capsKey);
+        const caps = this._capsKey;
         if (!caps)
             return;
-        if (/** @type {Clutter.Keymap} */ (this._keymap).get_caps_lock_state()) {
+        if (this._keymap.get_caps_lock_state()) {
             caps.add_style_class_name(Style.LOCKED);
             this._tint(caps, true);
         } else {
@@ -789,36 +681,26 @@ class Keyboard extends St.BoxLayout {
         }
     }
 
-    // Flip the numpad between numeric and navigation: swap faces and relight the Num key.
     _toggleNum() {
         this._numeric = !this._numeric;
         this._applyPads();
         this._paintNum();
     }
 
-    // Set each pad key to its face for the current Num mode: the digit,
-    // or the navigation face with the same word/symbol fit as the standalone nav keys.
     _applyPads() {
-        const pads = /** @type {PadKey[]} */ (this._pads);
         if (!Main.layoutManager.primaryMonitor)
             return;
-        for (const entry of pads) {
-            let next;
-            if (this._numeric) {
-                next = entry.numeric.face;
-            } else {
-                const word = this._transform(entry.nav.word);
-                next = this._fits(entry.button, word, this._inner(entry.span)) ? word : entry.nav.symbol;
-            }
+        for (const entry of this._pads) {
+            const next = this._numeric
+                ? entry.numeric.face
+                : this._fitFace(entry.button, entry.nav.word, entry.nav.symbol, entry.span);
             if (entry.button.label !== next)
                 entry.button.set_label(next);
         }
     }
 
-    // Light the Num key while the numpad navigates; numeric mode leaves it dark,
-    // so a freshly opened keyboard shows no engaged mode and types digits.
     _paintNum() {
-        const num = /** @type {St.Button | null} */ (this._numKey);
+        const num = this._numKey;
         if (!num)
             return;
         if (!this._numeric) {
@@ -832,15 +714,9 @@ class Keyboard extends St.BoxLayout {
         }
     }
 
-    // Compose the root style: configured font,
-    // the fitted font-size scaled by glyph-size (the em text anchor),
-    // and a px tray padding pinned to the unscaled fit size;
-    // otherwise the stylesheet's em padding rides the glyph scale and resizes the board.
     _applyStyle() {
-        const settings = /** @type {Settings} */ (this._settings);
-        const family = settings.get_string(Key.FONT).replace(/"/g, '').trim();
-        const geom = /** @type {number} */ (this._fontSize);
-        const tight = /** @type {boolean} */ (this._tight);
+        const family = this._settings.get_string(Key.FONT).replace(/"/g, '').trim();
+        const geom = this._fontSize;
         const size = Math.round(geom * this._glyphScale());
         const parts = [];
         if (family && family !== FALLBACK_HEAD)
@@ -848,7 +724,7 @@ class Keyboard extends St.BoxLayout {
         if (size > 0)
             parts.push(`font-size: ${size}px`);
         if (geom > 0) {
-            const {side, bottom} = trayPadding(geom, tight);
+            const {side, bottom} = trayPadding(geom, this._tight);
             parts.push(`padding: ${side}px ${side}px ${bottom}px ${side}px`);
         }
         this.set_style(parts.length ? `${parts.join('; ')};` : null);
@@ -871,7 +747,6 @@ class Keyboard extends St.BoxLayout {
         return style;
     }
 
-    // Whether the key wears the lighter tile (see DARK_KEYS / LIGHT_KEYS for the split).
     /**
      * @param {import('./geometry.js').KeySpec} spec
      * @returns {boolean}
@@ -892,62 +767,42 @@ class Keyboard extends St.BoxLayout {
     /** @param {import('./geometry.js').KeySpec} spec */
     _activate(spec) {
         this._click();
-        /** @type {Chooser} */ (this._chooser).close();
-        if (spec.kind === Kind.HIDE) {
-            this.emit('dismiss');
-            return;
-        }
-        const code = spec.code;
-        if (code === undefined)
-            return;
-        if (spec.kind === Kind.LOCK)
-            /** @type {Injector} */ (this._injector).tap(code);
+        this._chooser.close();
+        if (spec.kind === Kind.HIDE)
+            this.emit(Signal.DISMISS);
         else
-            /** @type {Modifiers} */ (this._modifiers).tap(code);
+            this._injector.tap(spec.code);
     }
 
-    // Play the key-click; the player reads its own settings, so call unconditionally.
     _click() {
-        /** @type {Player} */ (this._player).click();
+        this._player.click();
     }
 
-    // Clear every soft modifier when the keyboard hides. No release is injected:
-    // the virtual device is disposed on hide, which releases any held key at the compositor,
-    // so only local state and lit faces need clearing. Caps is untouched.
     reset() {
-        /** @type {Chooser} */ (this._chooser).close();
-        // Cancel every in-flight press first: the keyboard can lower under a held finger,
-        // and TOUCH_END may never arrive, leaving a key repeating (a stuck Enter) or down.
-        for (const cancel of /** @type {(() => void)[]} */ (this._tracked))
+        this._chooser.close();
+        for (const cancel of this._tracked)
             cancel();
-        /** @type {Modifiers} */ (this._modifiers).clearAll();
-        /** @type {FnLayer} */ (this._fnLayer).off();
+        this._modifiers.clearAll();
+        this._fnLayer.off();
     }
 
-    // Paint an engaged modifier with the configured colour; a lock is the same hue,
-    // mixed toward white so one-shot and lock stay distinguishable off one setting.
     /**
      * @param {St.Button} button
      * @param {boolean} locked
      */
     _tint(button, locked) {
-        const settings = /** @type {Settings} */ (this._settings);
-        button.set_style(accentStyle(settings.get_string(Key.COLOR), locked));
+        button.set_style(accentStyle(this._settings.get_string(Key.COLOR), locked));
     }
 
-    // Re-tint every engaged modifier (and Caps) when the colour setting changes.
     _applyColor() {
-        /** @type {Modifiers} */ (this._modifiers).tintAll();
+        this._modifiers.tintAll();
         this._syncCaps();
         this._paintNum();
-        /** @type {FnLayer} */ (this._fnLayer).tint();
+        this._fnLayer.tint();
     }
 
-    // Apply the configured case to every static face; F-keys keep their capital F inside _transform,
-    // and function-row overrides are recased through _applyFunctions.
     _applyCase() {
-        const statics = /** @type {{button: St.Button, base: string}[]} */ (this._statics);
-        for (const {button, base} of statics) {
+        for (const {button, base} of this._statics) {
             const face = this._transform(base);
             if (button.label !== face)
                 button.set_label(face);
@@ -964,8 +819,7 @@ class Keyboard extends St.BoxLayout {
     _transform(text) {
         if (/^F([1-9]|1[0-2])$/.test(text))
             return text;
-        const settings = /** @type {Settings} */ (this._settings);
-        const mode = settings.get_string(Key.CASE);
+        const mode = this._settings.get_string(Key.CASE);
         if (mode === Case.UPPER)
             return text.toUpperCase();
         if (mode === Case.TITLE)
@@ -973,61 +827,33 @@ class Keyboard extends St.BoxLayout {
         return text.toLowerCase();
     }
 
-    // Language change: warn once on an unknown layout, then repaint.
-    // Modifier changes go straight to _paint so a keystroke does not spam the log.
     _relabel() {
-        const language = /** @type {Language} */ (this._language);
-        if (!supports(language.currentId()))
-            console.error(`touch-board: unsupported layout "${language.currentId()}", falling back to us glyphs`);
+        if (!supports(this._language.currentId()))
+            console.error(`touch-board: unsupported layout "${this._language.currentId()}", falling back to us glyphs`);
         this._paint();
     }
 
     _paint() {
-        const glyphs = /** @type {KeyButton[]} */ (this._glyphs);
-        const modifiers = /** @type {Modifiers} */ (this._modifiers);
         const layoutId = this._faceId();
-        const level = {shift: modifiers.shifted(), altgr: modifiers.altgr()};
-        const active = /** @type {FnLayer} */ (this._fnLayer).active();
+        const level = {shift: this._modifiers.shifted(), altgr: this._modifiers.altgr()};
+        const active = this._fnLayer.active();
         let dirty = false;
-        for (const button of glyphs) {
+        for (const button of this._glyphs) {
             const spec = button._spec;
-            if (spec.code === undefined)
-                continue;
-            // Under Fn a glyph key with an Fn face shows it (full word if it fits, else the compact symbol);
-            // otherwise the active-layout glyph. Scale before the fit.
             if (spec.fn)
                 this._fnScale(button, active, true);
             const face = active && spec.fn
-                ? this._fnFace(button, spec.fn, spec.span)
+                ? this._fitFace(button, spec.fn.face, spec.fn.symbol, spec.span)
                 : glyphFor(layoutId, spec.code, level);
             if (button.label !== face) {
                 button.set_label(face);
                 dirty = true;
             }
         }
-        // A face swap can leave the previous glyph's ink behind (the Fn-layer ghost);
-        // repaint the tray when any face actually changed.
         if (dirty)
             this.queue_redraw();
     }
 
-    // Resolve a glyph key's Fn face for the current fit: the cased word when it fits,
-    // else the compact symbol, mirroring the word/symbol choice _applyFaces makes.
-    /**
-     * @param {St.Button} button
-     * @param {import('./geometry.js').FnFace} fn
-     * @param {number} span
-     * @returns {string}
-     */
-    _fnFace(button, fn, span) {
-        const word = this._transform(fn.face);
-        if (fn.symbol === undefined)
-            return word;
-        return this._fits(button, word, this._inner(span)) ? word : fn.symbol;
-    }
-
-    // Scale a key's label to its Fn face: under Fn a key reads at the compact function size,
-    // not the large glyph size. Off Fn a glyph key returns to the glyph size.
     /**
      * @param {St.Button} button
      * @param {boolean} fn      The Fn face is the one being shown.
@@ -1038,7 +864,6 @@ class Keyboard extends St.BoxLayout {
             if (glyph)
                 button.remove_style_class_name(Style.GLYPH);
             button.add_style_class_name(Style.COMPACT);
-            // Settle the new metrics now so the following fit measures at the compact paint size.
             button.ensure_style();
         } else {
             button.remove_style_class_name(Style.COMPACT);
@@ -1048,16 +873,12 @@ class Keyboard extends St.BoxLayout {
     }
 
     release() {
-        const timers = /** @type {Set<number>} */ (this._timers);
-        for (const {source, id} of /** @type {Connection[]} */ (this._connections))
+        for (const {source, id} of this._connections)
             source.disconnect(id);
         this._connections = [];
-        /** @type {Chooser} */ (this._chooser).close();
-        for (const id of timers)
+        this._chooser.destroy();
+        for (const id of this._timers)
             GLib.source_remove(id);
-        timers.clear();
-        /** @type {Modifiers} */ (this._modifiers).clearAll();
-        /** @type {FnLayer} */ (this._fnLayer).clear();
-        this._paint();
+        this._timers.clear();
     }
 });

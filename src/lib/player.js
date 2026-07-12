@@ -1,26 +1,16 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
-import {Key, Bound, Click} from './settings.js';
+import {Key, Click} from './settings.js';
 
 /** @typedef {import('gi://Gio').default.Settings} Settings */
-/** @typedef {import('gi://Meta').default.SoundPlayer} SoundPlayer */
 
-// Cached click. One file, rewritten only when the variant or volume changes,
-// never on the hot path; a tap just replays it.
 const Cache = Object.freeze({DIR: 'touch-board', FILE: 'click.wav'});
 
-// Sound role for the shell sound player.
-// The event-sound channel uses it to route (and can mute) the click.
 const Role = Object.freeze({CLICK: 'Touch Board key click'});
 
-// PCM render constants. PEAK is the headroom-safe fraction of full scale;
-// the volume setting then scales the click down from that ceiling.
 const Audio = Object.freeze({RATE: 44100, PEAK: 0.9, BITS: 16, CHANNELS: 1});
 
-// Per-variant synthesis: each voice sums a damped-sine body (keycap resonance,
-// the "thock"), a higher damped-sine knock and a decaying noise burst (gain 0 drops either),
-// then a one-pole low-pass (cutoff Hz) rounds the mix. tau is decay (s).
 /** @typedef {{freq: number, glide: number, tau: number, gain: number}} Body */
 /** @typedef {{freq: number, tau: number, gain: number}} Knock */
 /** @typedef {{tau: number, gain: number}} Noise */
@@ -53,8 +43,6 @@ const Voices = Object.freeze({
     },
 });
 
-// Sound length: TAILS decay constants of the longest component, clamped to a snappy click.
-// Six leaves the tail at 0.25% of peak, inaudible after volume.
 const Length = Object.freeze({TAILS: 6, MIN: 0.016, MAX: 0.045});
 
 /**
@@ -67,28 +55,22 @@ function clamp(value, low, high) {
     return Math.max(low, Math.min(high, value));
 }
 
-// Plays a short click on each key tap. Synthesised to a cached WAV, not shipped,
-// so volume can be baked into the samples (the shell sound player has no volume of its own).
-// Settings are read live on each tap, so no signal wiring is needed.
 export class Player {
     /** @param {Settings} settings */
     constructor(settings) {
         this._settings = settings;
-        /** @type {SoundPlayer} */
-        this._sound = /** @type {any} */ (global.display).get_sound_player();
+        this._sound = global.display.get_sound_player();
         this._cancellable = new Gio.Cancellable();
         this._path = GLib.build_filenamev([GLib.get_user_cache_dir(), Cache.DIR, Cache.FILE]);
-        // Variant:volume the cache was rendered for; null forces a render on first tap.
         /** @type {string | null} */
         this._signature = null;
     }
 
-    // Play one click from live settings; re-render the cache only if the variant or volume changed.
     click() {
         const settings = this._settings;
         if (!settings.get_boolean(Key.CLICK))
             return;
-        const volume = clamp(settings.get_int(Key.VOLUME), Bound.VOLUME_MIN, Bound.VOLUME_MAX);
+        const volume = settings.get_int(Key.VOLUME);
         if (volume <= 0)
             return;
         const variant = settings.get_string(Key.SOUND);
@@ -98,20 +80,16 @@ export class Player {
                 return;
             this._signature = signature;
         }
-        // Cast for the call only: @girs hoists two near-identical Gio copies,
-        // so the File from new_for_path reads as a different type than play_from_file wants (one at runtime).
         /** @type {any} */ (this._sound).play_from_file(Gio.File.new_for_path(this._path), Role.CLICK, this._cancellable);
     }
 
-    // Render the variant, scaled to volume, into the cache file;
-    // returns whether it is now on disk.
     /**
      * @param {string} variant
      * @param {number} volume
      * @returns {boolean}
      */
     _render(variant, volume) {
-        const voice = Voices[variant] ?? Voices[Click.THOCK];
+        const voice = Voices[variant];
         const bytes = this._encode(this._synthesise(voice, volume));
         const directory = GLib.path_get_dirname(this._path);
         if (GLib.mkdir_with_parents(directory, 0o755) !== 0)
@@ -126,9 +104,6 @@ export class Player {
         }
     }
 
-    // Build 16-bit PCM for a voice (see Voices).
-    // Body and knock sines integrate their phase so a glide stays continuous;
-    // both start at phase 0 for a clean onset. Peak-normalise, then scale for headroom and volume.
     /**
      * @param {Voice} voice
      * @param {number} volume
@@ -142,7 +117,6 @@ export class Player {
         const duration = clamp(tau * Length.TAILS, Length.MIN, Length.MAX);
         const count = Math.round(rate * duration);
         const raw = new Float64Array(count);
-        // One-pole low-pass coefficient from the cutoff frequency.
         const rc = 1 / (2 * Math.PI * voice.cutoff);
         const alpha = step / (rc + step);
         let bodyPhase = 0;
@@ -171,7 +145,6 @@ export class Player {
         return samples;
     }
 
-    // Wrap PCM samples in a canonical 16-bit mono WAV container.
     /**
      * @param {Int16Array} samples
      * @returns {Uint8Array}

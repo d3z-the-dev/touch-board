@@ -4,7 +4,6 @@ import St from 'gi://St';
 
 const Style = Object.freeze({ROW: 'touch-board-row'});
 
-// A row distributing its children by relative span; a shared total aligns all rows.
 export const Row = GObject.registerClass(
 class Row extends St.Widget {
     /** @param {number} total */
@@ -35,10 +34,8 @@ class Row extends St.Widget {
      * @param {number} [rows]
      */
     append(actor, span, rows = 1) {
-        const spans = /** @type {number[]} */ (this._spans);
-        const rowspans = /** @type {number[]} */ (this._rowspans);
-        spans.push(span);
-        rowspans.push(rows);
+        this._spans.push(span);
+        this._rowspans.push(rows);
         this.add_child(actor);
     }
 
@@ -47,7 +44,7 @@ class Row extends St.Widget {
      * @returns {[number, number]}
      */
     vfunc_get_preferred_height(_forWidth) {
-        const height = /** @type {number} */ (this._height);
+        const height = this._height;
         if (height > 0)
             return [height, height];
         let min = 0;
@@ -62,19 +59,13 @@ class Row extends St.Widget {
 
     /** @param {Clutter.ActorBox} box */
     vfunc_allocate(box) {
-        const total = /** @type {number} */ (this._total);
-        const spans = /** @type {number[]} */ (this._spans);
-        const rowspans = /** @type {number[]} */ (this._rowspans);
-        const gap = /** @type {number} */ (this._gap);
+        const {_total: total, _spans: spans, _rowspans: rowspans, _gap: gap} = this;
         this.set_allocation(box);
         const width = box.x2 - box.x1;
         const height = box.y2 - box.y1;
         const unit = width / total;
         const children = this.get_children();
         let offset = 0;
-        // Inset every tile by the same pixel gap (not an em).
-        // Keys of different font-sizes still align; a rowspan > 1 spans rows * height - gap,
-        // over transparent spacer cells, so the tall key shows and stays touchable.
         for (let index = 0; index < children.length; index++) {
             const next = offset + unit * spans[index];
             const x1 = Math.round(offset) + gap;
