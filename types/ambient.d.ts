@@ -18,6 +18,16 @@ import '@girs/gnome-shell/ambient';
 import '@girs/gnome-shell/misc/ibusManager/ambient';
 import '@girs/gnome-shell/extensions/global';
 
+// GI declares get_compositor_private() as a bare GObject; in mutter the compositor
+// private of a window is always its Clutter actor.
+declare module '@girs/meta-18/meta-18' {
+    namespace Meta {
+        interface Window {
+            get_compositor_private(): import('@girs/clutter-18/clutter-18').Clutter.Actor | null;
+        }
+    }
+}
+
 // @girs ships the keyboard status module but leaves getInputSourceManager and
 // InputSourceManager undeclared; augment it with the minimal surface language.js needs.
 declare module 'resource:///org/gnome/shell/ui/status/keyboard.js' {

@@ -1,9 +1,5 @@
 import {Default} from './settings.js';
 
-// Builds the St inline gradient for an engaged modifier. A lock lifts the fill toward
-// white so one-shot and lock read differently on a single colour. Pure; caller reads the setting.
-
-// Mix ratios: a locked fill toward white, the gradient end toward black.
 const Shade = Object.freeze({LOCK: 0.32, DARKEN: 0.16});
 
 const WHITE = [255, 255, 255];

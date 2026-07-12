@@ -1,6 +1,6 @@
 {
   "name": "touch-board-tooling",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Dev-only type-checking tooling for the Touch Board extension (ships as plain GJS in src/).",
   "license": "GPL-3.0-or-later",
   "private": true,

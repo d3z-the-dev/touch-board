@@ -1,11 +1,5 @@
 import {Code} from './codes.js';
 
-// Cosmetic glyphs shown on keys per xkb layout id;
-// typing correctness does not depend on them (the active layout translates the injected code).
-// Keyed by evdev code, missing entries fall back to US.
-// Each level lists only positions whose face differs from the upper-cased base;
-// shift upper-cases the base, altgr falls through to it.
-
 /** @typedef {Record<number, string>} Level */
 /** @typedef {{base: Level, shift?: Level, altgr?: Level, altgrShift?: Level}} Layout */
 
@@ -120,7 +114,6 @@ const ua = {
 
 const uaShift = ruShift;
 
-// Polish (programmers): base and shift are US QWERTY; diacritics live on AltGr.
 /** @type {Level} */
 const plAltgr = {
     [Code.A]: 'ą', [Code.C]: 'ć', [Code.E]: 'ę', [Code.L]: 'ł', [Code.N]: 'ń',
@@ -298,8 +291,6 @@ const ptAltgr = {
     [Code.E]: '€',
 };
 
-// Korean (Dubeolsik, 2-set): faces are the jamo on Korean keycaps,
-// number row and symbols match US. Shift carries the tense/compound jamo; the rest fall through.
 /** @type {Level} */
 const ko = {
     ...us,
@@ -335,7 +326,6 @@ const layouts = {
     ko: {base: ko, shift: koShift},
 };
 
-// GNOME reports some sources under an alternate xkb id; map those to a layout.
 /** @type {Record<string, string>} */
 const alias = {uk: 'ua', jp: 'ja', kr: 'ko', cn: 'zh'};
 
@@ -347,8 +337,6 @@ function resolve(layoutId) {
     return layouts[layoutId] ?? layouts[alias[layoutId]] ?? layouts.us;
 }
 
-/** @typedef {{shift?: boolean, altgr?: boolean}} Level2 */
-
 /**
  * @param {string} layoutId
  * @returns {boolean}
@@ -357,9 +345,6 @@ export function supports(layoutId) {
     return Object.hasOwn(layouts, layoutId) || Object.hasOwn(alias, layoutId);
 }
 
-// CJK sources whose native script comes from an input-method engine.
-// With no engine active there is nothing to compose, so the keyboard treats such a source as bare us.
-// Holds the raw xkb ids an engine reports plus the canonical names.
 const CJK = new Set(['ja', 'jp', 'zh', 'cn', 'ko', 'kr']);
 
 /**
@@ -371,11 +356,9 @@ export function cjk(layoutId) {
 }
 
 /**
- * Face for the active layout and modifier level: AltGr wins, else shift, else the
- * base upper-cased.
  * @param {string} layoutId
  * @param {number} code
- * @param {Level2} [level]
+ * @param {{shift?: boolean, altgr?: boolean}} [level]
  * @returns {string}
  */
 export function glyphFor(layoutId, code, level = {}) {
@@ -397,9 +380,6 @@ export function glyphFor(layoutId, code, level = {}) {
 }
 
 /**
- * The US-layout glyph at a key position: what a composed key forwards to the input
- * method. A CJK engine maps from the US position (ko jamo on the cap, ja/zh
- * romaji/pinyin).
  * @param {number} code
  * @param {boolean} shift
  * @returns {string}

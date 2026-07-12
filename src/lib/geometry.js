@@ -1,14 +1,6 @@
 import {Code, Kind} from './codes.js';
 import {Layout} from './settings.js';
 
-// Selectable key blocks, keyed by the `layout` setting.
-// Each profile is a continuous grid (every row sums to its own unit total);
-// the keyboard scales the unit to the display width, so fewer columns draw larger keys.
-// See KeySpec for the per-key fields.
-//
-// compact (60%) drops the F-row, navigation and arrows. Its Fn layer maps:
-// number row → F1-F12, U/I/O/P and J/K/L/; → nav and arrows, etc.
-
 /**
  * @typedef {object} KeySpec
  * @property {string} kind       One of the Kind.* behaviours.
@@ -109,8 +101,6 @@ function lock(code, label, span = 1, symbol) {
 }
 
 /**
- * Num key: toggles the numpad between its numeric and navigation faces; injects
- * nothing itself.
  * @param {string} label
  * @param {number} [span]
  * @param {string} [symbol]
@@ -121,8 +111,6 @@ function num(label, span = 1, symbol) {
 }
 
 /**
- * Fn-layer key: selects each key's Fn face/code instead of injecting its own;
- * mode-branched at release like the soft modifiers.
  * @param {string} label
  * @param {number} [span]
  * @param {string} [symbol]
@@ -133,9 +121,6 @@ function fn(label, span = 1, symbol) {
 }
 
 /**
- * A numpad key carrying both faces the Num mode switches between: a digit and a
- * navigation action. Each face injects its own evdev code, so output follows the
- * keyboard's own Num mode, not the system Num Lock.
  * @param {string} digit       Numeric face.
  * @param {number} numeric     Numeric evdev code (Code.N*).
  * @param {string} word        Navigation face: full word, or arrow glyph.
@@ -167,8 +152,6 @@ function spacer(span) {
 }
 
 /**
- * Stretch a key down over several rows; the cells below must be spacers to keep
- * the column grid aligned.
  * @param {KeySpec} spec
  * @param {number} rows
  * @returns {KeySpec}
@@ -178,8 +161,6 @@ function tall(spec, rows) {
 }
 
 /**
- * Force the lighter input tile on an otherwise-functional key, scoped to the one
- * spec instance (so a kind that is dark elsewhere can read as input here).
  * @param {KeySpec} spec
  * @returns {KeySpec}
  */
@@ -188,8 +169,6 @@ function light(spec) {
 }
 
 /**
- * Attach an Fn-layer face/code: while Fn is engaged the key paints `face` (or
- * `symbol` when too narrow) and injects `code` instead of its base.
  * @param {KeySpec} spec
  * @param {number} code
  * @param {string} face
@@ -298,8 +277,6 @@ const compact = [
     ],
 ];
 
-// full (100%): standard block + nav column + numpad, with spacer gaps between clusters.
-// KPPLUS and KPENTER carry rows: 2; spacers below maintain the column grid.
 /** @type {KeySpec[][]} */
 const full = [
     [

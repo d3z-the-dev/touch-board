@@ -12,12 +12,13 @@ import {Panel} from './panel.js';
 
 const Signal = Object.freeze({
     ADDED: 'child-added',
-    DESTROYED: 'destroy',
+    DESTROY: 'destroy',
     VISIBLE: 'notify::visible',
     FOCUS: 'notify::key-focus',
     FOCUS_WINDOW: 'notify::focus-window',
     HEIGHT: 'notify::height',
     TOUCH: 'notify::touch-mode',
+    Y: 'notify::y',
     DISMISS: 'dismiss',
     MOVED: 'position-changed',
     MONITORS: 'monitors-changed',
@@ -28,16 +29,10 @@ const Signal = Object.freeze({
 
 const Indicator = Object.freeze({ROLE: 'touch-board'});
 
-// Duration (ms) of the focused-window lift slide.
 const Lift = Object.freeze({DURATION: 150});
 
-// Delay (ms) before auto-shows are honoured. At login a field can grab focus,
-// causing a premature pop; the panel button is explicit and ignores this delay.
 const Settle = Object.freeze({DELAY: 3000});
 
-// keyboardBox is anchored below screen (y = monitor.height);
-// widgets inside offset by -ownHeight to show. Cooperative apps/prompts reveal it via text-input-v3,
-// so we react on notify::visible rather than patch the manager. Others use the panel indicator.
 export class Bridge {
     /** @type {import('gi://Gio').default.Settings} */
     _settings;
@@ -58,20 +53,11 @@ export class Bridge {
     /** @type {Clutter.Seat} */
     _seat;
     _dismissed = false;
-    // False during the post-activation settle window (see Settle.DELAY),
-    // so a field grabbing focus at login cannot pop the keyboard. The panel button bypasses it.
     _ready = false;
-    // True only while our own _show() forces the shared box visible,
-    // so the box's visibility handler does not re-gate (and re-hide) an explicit open.
     _showing = false;
-    // True while the keyboard is up by explicit request (the panel button), not an auto-show.
-    // GNOME drops the shared box on focus changes;
-    // a pinned keyboard re-asserts it instead of being torn down.
     _pinned = false;
     /** @type {{source: any, id: number}[]} */
     _connections = [];
-    _caretId = 0;
-    _ibusId = 0;
     _movedId = 0;
     _readyId = 0;
     /** @type {Meta.Window | null} */
@@ -80,6 +66,8 @@ export class Bridge {
     _movedWindow = null;
     /** @type {number | null} */
     _focusWindowStartY = null;
+    /** @type {Clutter.Actor | null} */
+    _restoring = null;
     /** @type {{x: number, y: number, width: number, height: number} | null} */
     _caret = null;
 
@@ -88,7 +76,6 @@ export class Bridge {
         this._settings = settings;
     }
 
-    // Caret and IBus singletons need a guarded disconnect; they stay out of _connections.
     /**
      * @param {any} source
      * @param {string} signal
@@ -109,8 +96,6 @@ export class Bridge {
         this._keyboard = new Keyboard(this._injector, this._language, this._settings, this._player);
         this._keyboard.connect(Signal.DISMISS, () => this._hide());
 
-        this._dismissed = false;
-
         this._box = Main.layoutManager.keyboardBox;
         this._box.add_child(this._keyboard);
         this._keyboard.hide();
@@ -121,18 +106,13 @@ export class Bridge {
             if (child !== this._keyboard)
                 this._suppress(child);
         }
-        this._track(this._box, Signal.ADDED,(/** @type {Clutter.Actor} */ _box, /** @type {Clutter.Actor} */ actor) => {
+        this._track(this._box, Signal.ADDED, (_box, actor) => {
             if (actor !== this._keyboard)
                 this._suppress(actor);
         });
 
-        // Box made visible by a standard trigger (cooperative app/prompt): slide in,
-        // but only on a settled touch session (a tap, not a click or login-settle focus grab).
-        // Our _show() raises `_showing`, so an explicit open is not re-gated.
-        this._track(this._box, Signal.VISIBLE,() => {
+        this._track(this._box, Signal.VISIBLE, () => {
             if (!this._box.visible) {
-                // Box hidden by something other than our close (GNOME drops it on focus changes).
-                // A pinned keyboard re-asserts it; an auto-show follows it down.
                 if (this._pinned)
                     this._show(true);
                 else if (this._lifted())
@@ -148,18 +128,10 @@ export class Bridge {
             this._show(false);
         });
 
-        // Mirror the stock OSK: when touch mode ends (a physical keystroke),
-        // the keyboard hides, however it was opened.
         this._track(this._seat, Signal.TOUCH, () => this._onTouchMode());
 
-        // An orientation or monitor change re-solves the geometry.
-        // layoutManager emits this after its own primaryMonitor is updated,
-        // so the refit reads the new dimensions. It runs whether the keyboard is shown or hidden,
-        // so a rotation while closed leaves the next open already sized for the display.
         this._track(Main.layoutManager, Signal.MONITORS, () => this._onMonitorsChanged());
 
-        // On first layout the keyboard has height 0 when notify::visible fires;
-        // once allocated, reposition and re-evaluate the lift against the known height.
         this._track(this._keyboard, Signal.HEIGHT, () => {
             if (this._box.visible && !this._dismissed) {
                 this._positionKeyboard();
@@ -167,44 +139,28 @@ export class Bridge {
             }
         });
 
-        // A fresh focus window has not reported a caret yet;
-        // drop the stale one and re-evaluate. The frame fallback holds until an input method emits a rect.
         this._track(global.display, Signal.FOCUS_WINDOW, () => this._onFocusWindow());
 
-        // Caret source for cooperative Wayland clients (input method, stage coords).
-        // Guarded: a build without the signal stays on the frame fallback.
-        try {
-            this._caretId = Main.inputMethod?.connect?.(Signal.CARET,
-                (/** @type {unknown} */ _im, /** @type {unknown} */ rect) => this._onCaret(rect)) ?? 0;
-        } catch {
-            this._caretId = 0;
-        }
+        this._track(Main.inputMethod, Signal.CARET, (_im, rect) => this._onCaret({
+            x: rect.get_x(),
+            y: rect.get_y(),
+            width: rect.get_width(),
+            height: rect.get_height(),
+        }));
 
-        // Caret source for X11/XWayland clients (terminals, legacy apps) via IBus.
-        // Consume the IBus rect only when no Wayland input method holds focus,
-        // so the two sources never fight over the same caret.
-        try {
-            this._ibusId = getIBusManager()?.connect?.(Signal.IBUS_CARET,
-                (/** @type {unknown} */ _ibus, /** @type {{x: number, y: number, width: number, height: number}} */ rect) => {
-                    if (/** @type {any} */ (Main.inputMethod)?.currentFocus)
-                        return;
-                    this._onCaret(rect);
-                }) ?? 0;
-        } catch {
-            this._ibusId = 0;
-        }
+        // Caret source for X11/XWayland clients via IBus (a plain struct). Consumed only
+        // when no Wayland input method holds focus, so the two sources never fight.
+        this._track(getIBusManager(), Signal.IBUS_CARET, (_ibus, rect) => {
+            if (!Main.inputMethod.currentFocus)
+                this._onCaret(rect);
+        });
 
-        // Shell-internal Clutter.Text fields (overview search, auth dialogs)
-        // bypass text-input-v3; catch them via stage key-focus.
         this._track(global.stage, Signal.FOCUS, () => this._onStageFocus());
 
-        // Panel toggle: reachable under any pointer grab.
         this._panel = new Panel();
         this._panel.bind(() => this._toggleKeyboard());
         Main.panel.addToStatusArea(Indicator.ROLE, this._panel);
 
-        // Hold off automatic shows until the shell settles (see Settle).
-        this._ready = false;
         this._readyId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, Settle.DELAY, () => {
             this._ready = true;
             this._readyId = 0;
@@ -222,30 +178,19 @@ export class Bridge {
     _onStageFocus() {
         if (!this._ready || !this._touch())
             return;
-        let actor = global.stage.get_key_focus();
-        while (actor) {
-            if (actor instanceof Clutter.Text) {
-                this._show(false);
-                return;
-            }
-            actor = actor.get_parent();
-        }
+        if (global.stage.get_key_focus() instanceof Clutter.Text)
+            this._show(false);
     }
 
-    // True while the last input came from a touchscreen. Auto-show honours it;
-    // a mouse click is skipped, and the panel button bypasses it.
     _touch() {
-        return /** @type {Clutter.Seat} */ (this._seat).get_touch_mode();
+        return this._seat.get_touch_mode();
     }
 
     _onTouchMode() {
-        if (!/** @type {Clutter.Seat} */ (this._seat).get_touch_mode() && this._keyboard.visible)
+        if (!this._seat.get_touch_mode() && this._keyboard.visible)
             this._hide();
     }
 
-    // Re-solve the keyboard geometry for the new monitor/orientation. When it is up,
-    // re-anchor it against the refreshed height and re-evaluate the focused-window lift;
-    // when it is down, the refit alone readies the next open.
     _onMonitorsChanged() {
         this._keyboard.refit();
         if (this._box.visible && !this._dismissed) {
@@ -254,8 +199,6 @@ export class Bridge {
         }
     }
 
-    // `_showing` is raised across box.show() so the visibility handler does not re-gate the open;
-    // `_pinned` records an explicit open (see the field docs).
     /** @param {boolean} pinned */
     _show(pinned) {
         this._pinned = pinned;
@@ -275,8 +218,6 @@ export class Bridge {
         this._box.hide();
     }
 
-    // Drop the keyboard and release the lifted window without touching the shared box.
-    // Shared by the manual close and the external hide path.
     _lower() {
         this._dismissed = true;
         this._setFocusWindow(null);
@@ -287,7 +228,6 @@ export class Bridge {
         this._keyboard.hide();
     }
 
-    // True while the keyboard is up, so the focused window should carry its lift.
     _lifted() {
         return this._keyboard.visible && !this._dismissed;
     }
@@ -297,18 +237,12 @@ export class Bridge {
         this._evaluate();
     }
 
-    // A fresh caret from either source; store it (empty rects fall back to the frame)
-    // and re-evaluate.
-    /** @param {unknown} rect */
+    /** @param {{x: number, y: number, width: number, height: number}} rect */
     _onCaret(rect) {
-        this._caret = this._rectOf(rect);
+        this._caret = rect.height > 0 ? rect : null;
         this._evaluate();
     }
 
-    // Decide whether the focused window must be lifted clear of the keyboard.
-    // Lift by the keyboard height when its input would be occluded, drop once it rises clear.
-    // Input bottom is the caret bottom when known (Wayland/IBus), else the window frame bottom.
-    // When already lifted, the reported position is shifted up by height, so add it back first.
     _evaluate() {
         const monitor = Main.layoutManager.primaryMonitor;
         const window = global.display.get_focus_window();
@@ -336,8 +270,6 @@ export class Bridge {
             this._setFocusWindow(null);
     }
 
-    // Real actor position, not a paint-time translation, so a relayout cannot snap it back.
-    // Capture the new window's resting y before sliding.
     /** @param {Meta.Window | null} window */
     _setFocusWindow(window) {
         if (this._focusWindow === window)
@@ -345,7 +277,9 @@ export class Bridge {
         if (this._focusWindow)
             this._animateWindow(this._focusWindow, false);
         this._disconnectMoved();
-        const actor = window ? /** @type {Clutter.Actor | null} */ (window.get_compositor_private()) : null;
+        const actor = window ? window.get_compositor_private() : null;
+        if (actor && this._restoring === actor)
+            actor.remove_transition('y');
         this._focusWindowStartY = actor ? actor.y : null;
         if (window && actor) {
             this._animateWindow(window, true);
@@ -354,14 +288,13 @@ export class Bridge {
         this._focusWindow = window;
     }
 
-    // Reads the baseline from _setFocusWindow; must run before that baseline is cleared.
     /**
      * @param {Meta.Window} window
      * @param {boolean} show
      */
     _animateWindow(window, show) {
-        const actor = /** @type {Clutter.Actor | null} */ (window.get_compositor_private());
-        if (!actor || this._focusWindowStartY === null)
+        const actor = window.get_compositor_private();
+        if (!actor)
             return;
         const finalY = show
             ? this._focusWindowStartY - this._keyboard.height
@@ -370,19 +303,19 @@ export class Bridge {
         const unmanagedId = window.connect(Signal.UNMANAGED, () => {
             unmanaged = true;
         });
-        // The tray's rounded top corners are transparent and reveal this window as it slides;
-        // repaint the tray each frame so the corners track it.
-        const refreshId = actor.connect('notify::y', () => this._keyboard.queue_redraw());
-        // ease() is gnome-shell's actor animation helper, not in the Clutter type surface;
-        // hence the cast.
-        /** @type {any} */ (actor).ease({
+        const refreshId = actor.connect(Signal.Y, () => this._keyboard.queue_redraw());
+        if (!show)
+            this._restoring = actor;
+        actor.ease({
             y: finalY,
             duration: Lift.DURATION,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onStopped: () => {
+            onStopped: isFinished => {
                 actor.disconnect(refreshId);
                 window.disconnect(unmanagedId);
-                if (unmanaged)
+                if (this._restoring === actor)
+                    this._restoring = null;
+                if (unmanaged || (show && !isFinished))
                     return;
                 actor.y = finalY;
                 this._sync(window, finalY);
@@ -406,8 +339,6 @@ export class Bridge {
             this._connectMoved(window);
     }
 
-    // The user moved or grabbed the lifted window:
-    // drop the baseline so we neither re-lift it nor snap it back.
     _onMoved() {
         this._disconnectMoved();
         this._focusWindow = null;
@@ -428,27 +359,24 @@ export class Bridge {
         this._movedWindow = null;
     }
 
-    // Normalise a caret rectangle (a boxed Mtk/Graphene rect with accessors,
-    // an origin/size struct, or a plain struct). An empty rect is treated as no caret.
-    /**
-     * @param {unknown} rect
-     * @returns {{x: number, y: number, width: number, height: number} | null}
-     */
-    _rectOf(rect) {
-        if (!rect)
-            return null;
-        const box = /** @type {any} */ (rect);
-        let out;
-        if (typeof box.get_y === 'function')
-            out = {x: box.get_x(), y: box.get_y(), width: box.get_width(), height: box.get_height()};
-        else if (box.origin && box.size)
-            out = {x: box.origin.x, y: box.origin.y, width: box.size.width, height: box.size.height};
-        else
-            out = {x: box.x, y: box.y, width: box.width, height: box.height};
-        return out.height > 0 ? out : null;
+    // Instant counterpart of the lift release: no animation may outlive disable().
+    _restoreLift() {
+        if (this._restoring)
+            this._restoring.remove_transition('y');
+        const window = this._focusWindow;
+        this._focusWindow = null;
+        this._disconnectMoved();
+        if (!window || this._focusWindowStartY === null)
+            return;
+        const actor = window.get_compositor_private();
+        if (actor) {
+            actor.remove_transition('y');
+            actor.y = this._focusWindowStartY;
+            this._sync(window, this._focusWindowStartY);
+        }
+        this._focusWindowStartY = null;
     }
 
-    // Offset the keyboard up by its own height so it sits at the bottom of the display.
     _positionKeyboard() {
         const h = this._keyboard.height;
         if (h > 0)
@@ -464,7 +392,7 @@ export class Bridge {
             if (actor.visible)
                 actor.hide();
         });
-        const destroyId = actor.connect(Signal.DESTROYED, () => {
+        const destroyId = actor.connect(Signal.DESTROY, () => {
             actor.disconnect(visibleId);
             this._foreign.delete(actor);
         });
@@ -472,36 +400,16 @@ export class Bridge {
     }
 
     deactivate() {
-        if (this._panel) {
-            this._panel.destroy();
-            this._panel = null;
-        }
+        this._panel.destroy();
+        this._panel = null;
         if (this._readyId) {
             GLib.source_remove(this._readyId);
             this._readyId = 0;
         }
-        this._ready = false;
         for (const {source, id} of this._connections)
             source.disconnect(id);
         this._connections = [];
-        if (this._caretId) {
-            try {
-                Main.inputMethod?.disconnect?.(this._caretId);
-            } catch {
-                // The input method singleton may already be gone on teardown.
-            }
-            this._caretId = 0;
-        }
-        if (this._ibusId) {
-            try {
-                getIBusManager()?.disconnect?.(this._ibusId);
-            } catch {
-                // The IBus manager singleton may already be gone on teardown.
-            }
-            this._ibusId = 0;
-        }
-        this._setFocusWindow(null);
-        this._disconnectMoved();
+        this._restoreLift();
         for (const [actor, ids] of this._foreign) {
             actor.disconnect(ids.visibleId);
             actor.disconnect(ids.destroyId);
@@ -513,13 +421,13 @@ export class Bridge {
         this._keyboard.release();
         this._box.remove_child(this._keyboard);
         this._keyboard.destroy();
-        this._keyboard = /** @type {never} */ (null);
+        this._keyboard = null;
 
-        this._language?.destroy();
+        this._language.destroy();
         this._language = null;
-        this._injector?.destroy();
+        this._injector.destroy();
         this._injector = null;
-        this._player?.destroy();
+        this._player.destroy();
         this._player = null;
     }
 }

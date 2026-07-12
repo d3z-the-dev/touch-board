@@ -231,3 +231,6 @@ With a fix, document the full chain: how you found the bug, what you changed, an
 ## License
 
 Touch Board ships under GPL-3.0-or-later. See [LICENSE](LICENSE) for the full text.
+
+The documentation images in `docs/img/` are licensed under
+[CC-BY-SA-4.0](LICENSES/CC-BY-SA-4.0.txt).

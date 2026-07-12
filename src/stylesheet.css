@@ -1,7 +1,7 @@
 /* Root font-size is the text-scale anchor: every label size below is in em, so one
    value (the glyph-size setting) resizes them together. JS drives the key geometry
    (row height, gutters, tray padding) from the unscaled fit size, so labels scale
-   without moving the keys. Keep the em-metrics here in sync with Metric in keyboard.js. */
+   without moving the keys. Keep the em-metrics here in sync with Metric in metrics.js. */
 
 .touch-board {
     background-color: rgb(14, 14, 16);

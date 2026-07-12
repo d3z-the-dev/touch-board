@@ -8,16 +8,13 @@ const Style = Object.freeze({ICON: 'system-status-icon'});
 const Icon = Object.freeze({NAME: 'input-keyboard-symbolic'});
 const Role = Object.freeze({NAME: 'touch-board'});
 
-// Top-bar indicator that toggles the keyboard. Lives in the panel status area,
-// reachable under any window's pointer grab; the press is consumed and forwarded to the toggle callback.
 export const Panel = GObject.registerClass(
 class Panel extends PanelMenu.Button {
     _init() {
         super._init(0.0, Role.NAME, true);
-        // No key focus: grabbing it would pull focus off the text field,
-        // and KeyboardController drops the shared box on that change.
         this.can_focus = false;
-        this._toggle = /** @type {() => void} */ (() => {});
+        /** @type {() => void} */
+        this._toggle = () => {};
         this.add_child(new St.Icon({icon_name: Icon.NAME, style_class: Style.ICON}));
     }
 
@@ -30,7 +27,7 @@ class Panel extends PanelMenu.Button {
     vfunc_event(event) {
         const type = event.type();
         if (type === Clutter.EventType.BUTTON_PRESS || type === Clutter.EventType.TOUCH_BEGIN) {
-            /** @type {() => void} */ (this._toggle)();
+            this._toggle();
             return Clutter.EVENT_STOP;
         }
         return Clutter.EVENT_PROPAGATE;
