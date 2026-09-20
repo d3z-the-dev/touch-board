@@ -30,7 +30,7 @@
     <key name="font" type="s">
       <default>'IBM Plex Sans'</default>
       <summary>Key glyph font family</summary>
-      <description>Font family used to render the key glyphs. The default keeps the stylesheet font, which carries a built-in fallback chain (the script-specific IBM Plex Sans siblings, then a generic sans-serif) so glyphs outside the family still render. A custom family is used on its own; the system substitutes a fallback font for any glyph it lacks.</description>
+      <description>Font family for the key glyphs. The default uses the stylesheet font list with its IBM Plex Sans fallbacks; any other family is used on its own.</description>
     </key>
     <key name="fkeys" type="a{ss}">
       <default>{}</default>
@@ -56,34 +56,34 @@
       <default>35</default>
       <range min="18" max="60"/>
       <summary>Keyboard height</summary>
-      <description>Keyboard height as a percent of the display height. Being relative to the screen, it holds across resolutions and both orientations.</description>
+      <description>Keyboard height as a percent of the shorter display edge.</description>
     </key>
     <key name="spacing" type="i">
       <default>75</default>
       <range min="0" max="100"/>
       <summary>Key spacing</summary>
-      <description>Spacing between keys as a percent of the default gutter. 100 keeps the default spacing; lower values tighten the gap on both axes, leaving the key and board sizes unchanged.</description>
+      <description>Gap between keys as a percent of the default gap.</description>
     </key>
     <key name="glyph-size" type="i">
       <default>100</default>
       <range min="75" max="135"/>
       <summary>Font size</summary>
-      <description>Font size of the key glyphs as a percent of the default. 100 keeps the default size; the scale applies to every label tier at once and leaves the key and board sizes unchanged.</description>
+      <description>Font size of the key glyphs as a percent of the default.</description>
     </key>
     <key name="corner" enum="org.gnome.shell.extensions.touch-board.corner">
       <default>'soft'</default>
       <summary>Key corners</summary>
-      <description>Roundness of the key corners. Sharp is nearly square, soft keeps the default rounding, round is fully rounded.</description>
+      <description>Roundness of the key corners. Sharp is nearly square, soft is the default, round has the largest radius.</description>
     </key>
     <key name="rounded" type="b">
       <default>true</default>
       <summary>Rounded keyboard corners</summary>
-      <description>Whether the keyboard's top corners are rounded. When on, a window sliding up behind the transparent corners can flash an artifact; turn it off to square the corners and remove it.</description>
+      <description>Whether the keyboard's top corners are rounded.</description>
     </key>
     <key name="modifier-mode" enum="org.gnome.shell.extensions.touch-board.modifier-mode">
       <default>'latch'</default>
       <summary>Modifier behaviour</summary>
-      <description>How a soft modifier (Shift, Ctrl, Super, Alt) responds to a tap. Hold: a quick tap is one real keystroke and a long press locks. Latch: a tap arms the next keystroke only and a double tap locks. Toggle: every tap flips a lock.</description>
+      <description>How the modifier keys (Shift, Ctrl, Alt, Super, AltGr) and Fn respond to a tap. Hold: a quick tap is one real keystroke and a long press locks. Latch: a tap arms the next keystroke only and a double tap locks. Toggle: every tap flips a lock.</description>
     </key>
     <key name="accents" type="b">
       <default>true</default>
@@ -104,7 +104,7 @@
       <default>35</default>
       <range min="0" max="100"/>
       <summary>Click volume</summary>
-      <description>Loudness of the key click as a percent of full scale. Zero is silent, the same as turning the click off.</description>
+      <description>Loudness of the key click as a percent of full scale.</description>
     </key>
   </schema>
 </schemalist>

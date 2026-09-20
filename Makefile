@@ -2,14 +2,14 @@
 # The installable extension lives in src/; everything else is dev tooling.
 
 UUID := $(shell sed -n 's/.*"uuid"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' src/metadata.json)
+ifeq ($(UUID),)
+$(error cannot read uuid from src/metadata.json)
+endif
 SOURCE := src
 DEST := $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 DIST := dist
 
-.PHONY: check lint install uninstall enable pack clean
-
-check:
-	npm run check
+.PHONY: lint install uninstall enable pack clean
 
 lint:
 	npm run lint
@@ -20,7 +20,6 @@ install:
 	mkdir -p "$(DEST)"
 	cp -r "$(SOURCE)/." "$(DEST)/"
 	glib-compile-schemas "$(DEST)/schemas"
-	gsettings set org.gnome.shell disable-user-extensions false || true
 	gnome-extensions enable "$(UUID)" 2>/dev/null || true
 	@echo "Installed $(UUID). On Wayland, log out and back in to load it."
 
@@ -36,4 +35,4 @@ pack:
 	bash scripts/pack.sh
 
 clean:
-	rm -rf "$(DIST)" build
+	rm -rf "$(DIST)"

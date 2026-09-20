@@ -7,7 +7,7 @@ _all **keys**, any **layout**, raw **input**_
 
 **`layout profiles`** **`display scaling`** **`smart visibility`** **`evdev injection`** **`xkb tracking`** **`accent popups`** **`modifier modes`** **`fn layer`**
 
-![GNOME Shell 50](https://img.shields.io/badge/GNOME_Shell-50-4A86CF?logo=gnome&logoColor=white)
+![GNOME Shell 46–50](https://img.shields.io/badge/GNOME_Shell-46--50-4A86CF?logo=gnome&logoColor=white)
 &nbsp;
 ![License GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)
 
@@ -17,14 +17,14 @@ _all **keys**, any **layout**, raw **input**_
 
 >The stock OSK covers a search box and a password field. Touch Board is a full keyboard for writing, coding, and anything that needs working modifier keys, proper layout support and hardware-level evdev input. The panel button keeps it one tap away on any session, lock screen included.
 
-Requires **GNOME Shell 50**.
+Requires **GNOME Shell 46–50**.
 
 ## Highlights
 
 - **Built for terminal work and coding.** Everything a physical keyboard has (modifier keys, function row, numpad, navigation) in a touch-native interface.
 - **Hardware-level input.** Keys inject raw Linux evdev codes through a Clutter virtual device. The active xkb layout translates them. Key faces are cosmetic.
 - **Three profiles.** Compact (60%) is the ANSI main block. Standard (75%) adds the F-row, navigation column, and arrow cluster. Full (100%) extends with a numpad. Each scales to fill the display width.
-- **Modifier state machine.** Shift, Ctrl, Alt, Super, and AltGr each arm on lift. Tap for a one-shot (clears after the next key), hold to lock. Three modes: Hold, Latch (double-tap to promote to lock), Toggle. Armed glyph keys preview the shifted or AltGr level.
+- **Modifier state machine.** Shift, Ctrl, Alt, Super, and AltGr each arm on lift. Three modes: Hold (tap sends one keystroke, long press locks), Latch (the default: tap arms a one-shot, double tap locks) and Toggle (tap flips a lock). Armed glyph keys preview the shifted or AltGr level.
 - **Fn layer.** A second layer of faces and codes over the entire board, engaged as one-shot or lock. On compact it restores the full nav cluster (F1-F12 on the number row, arrows and nav on UIOP / JKL;). On standard and full it turns F1-F12 into the media row.
 - **Reassignable function row.** Each F1-F12 slot maps independently to volume, brightness, media transport, mic mute, navigation, or editing keys.
 - **Live xkb tracking.** Subscribes to `InputSourceManager` directly. The gsetting lags under Wayland. Bundled glyph maps cover Western and Eastern European layouts plus US English (11 total). Unmapped sources fall back to US faces while injected codes stay correct.
@@ -33,9 +33,9 @@ Requires **GNOME Shell 50**.
 - **Numpad.** Full profile only. Digit and navigation faces on the same keys. A local Num key switches between them, independent of the system Num Lock.
 - **Caps Lock sync.** Tracks the real system keymap state. Hardware toggles update the key face on the spot.
 - **Window lift.** The focused window slides up by the keyboard height when the keyboard would cover its input. Caret position from the Wayland input method or IBus (X11/XWayland), with the window frame as fallback. Drag the window to release the lift.
-- **Smart visibility.** Opens on text-input-v3 (cooperative apps and prompts), stage key-focus (overview search, auth dialogs), or the panel button. Auto-shows skip when a physical keyboard is attached, after hardware typing, or during the 3-second login settle. The panel button bypasses all of this, lock screen included.
-- **Single-anchor scaling.** One root font-size from height-percent of the short display edge. Every key metric in em. A portrait width guard keeps the full layout on screen after rotation.
-- **Customization.** Layout profile, height (18-60%), key spacing, glyph size (75-135%), modifier mode (Hold/Latch/Toggle), accent popup, engaged modifier colour, label case (upper/title/lower), corner style (sharp/soft/round), click sound (thock/click/tap/pop) and volume, key font, per-F-key remapping.
+- **Smart visibility.** Opens on text-input-v3 (cooperative apps and prompts), stage key-focus (overview search, auth dialogs), or the panel button. Auto-shows need touch mode (tablet mode, or no mouse or touchpad present) and wait out the 3-second login settle. The panel button bypasses all of this, lock screen included.
+- **Single-anchor scaling.** One root font-size from height-percent of the short display edge. Labels scale with it. A portrait width guard keeps the full layout on screen after rotation.
+- **Customization.** Layout profile, height (18-60%), key spacing, font size (75-135%), key font, label case (upper/title/lower), key corners (sharp/soft/round), rounded keyboard corners, engaged modifier colour, modifier mode (Hold/Latch/Toggle), accent popup, click sound (thock/click/tap/pop) and volume, per-F-key remapping.
 
 ## Profiles
 
@@ -106,7 +106,7 @@ The Fn key swaps each key's face and code without injecting its own code. Tap, h
 
 On compact, Fn restores the full nav cluster: F1-F12 on the number row, Esc becomes grave/tilde, `U I O P` and `J K L ;` become navigation and arrows, Backspace becomes forward Delete.
 
-On standard and full, Fn turns F1-F12 into a media row: brightness, Mission Control, search, keyboard backlight, transport and volume. A function-row override always wins over Fn.
+On standard and full, Fn turns F1-F12 into a media row: brightness, overview, search, keyboard backlight, transport and volume. A function-row override always wins over Fn.
 
 ### Modifiers
 
@@ -166,7 +166,7 @@ Three triggers open it:
 - Shell-internal fields (overview search, auth dialogs) through stage key-focus.
 - The panel button bypasses all gates and works on any session, lock screen included.
 
-Auto-shows don't trigger while a physical keyboard is attached, after physical typing, or during a 3-second settle window after login.
+Auto-shows need touch mode: tablet mode on, or no mouse or touchpad present. They also wait out a 3-second settle window after login.
 
 While up, it lifts the focused window by its own height. Caret position from the Wayland input method or IBus (X11/XWayland), with the window frame as fallback. Dragging the window releases the lift.
 
@@ -175,30 +175,31 @@ While up, it lifts the focused window by its own height. Caret position from the
 Open with `gnome-extensions prefs touch-board@d3z-the-dev.github.io` or from the Extensions app.
 
 - **Layout:** compact, standard, or full.
+- **Height:** percent of the shorter display edge, 18 to 60.
+- **Key spacing and Font size:** percent of the default.
 - **Key font:** glyph family. The default IBM Plex Sans chain falls back to system fonts for CJK, Arabic, Devanagari and other non-Latin scripts.
-- **Engaged colour:** fill for one-shot and locked modifiers.
 - **Label case:** upper, title or lower. F1-F12 always keep their capital F.
-- **Rounded corners:** round or square the key corners and the keyboard's top edge.
-- **Height:** percent of the display height, 18 to 60.
-- **Modifier keys:** Hold, Latch, or Toggle.
+- **Key corners:** sharp, soft or round.
+- **Keyboard corners:** round or square the keyboard's top corners.
+- **Engaged colour:** fill for one-shot and locked modifiers.
+- **Modifier keys:** Hold, Latch, or Toggle. Fn follows the same mode.
 - **Accent popup:** long-press for accents, or auto-repeat instead.
 - **Key click:** synthesised click on each tap, with selectable sound and volume.
 - **Function row:** reassign any F1-F12 to volume, brightness, media, mic mute, navigation or editing keys.
 
 ## Development
 
-`src/` runs as plain GJS with no build step. Type-checking uses `@girs` GNOME definitions under `checkJs`. Linting is eslint.
+`src/` runs as plain GJS with no build step. Linting is eslint.
 
 ```sh
 git clone https://github.com/d3z-the-dev/touch-board
 cd touch-board
 npm install
-make check   # tsc --noEmit
 make lint    # eslint
 make pack    # build the zip in dist/
 ```
 
-CI runs the same checks on every push and attaches a built zip to each tagged release.
+CI runs the same checks on pushes to master and on pull requests, and attaches a built zip to each tagged release.
 
 ## Contributing
 

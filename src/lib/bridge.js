@@ -1,6 +1,5 @@
 import GLib from 'gi://GLib';
 import Clutter from 'gi://Clutter';
-import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {getIBusManager} from 'resource:///org/gnome/shell/misc/ibusManager.js';
 
@@ -31,57 +30,39 @@ const Indicator = Object.freeze({ROLE: 'touch-board'});
 
 const Lift = Object.freeze({DURATION: 150});
 
+const Property = Object.freeze({Y: 'y'});
+
 const Settle = Object.freeze({DELAY: 3000});
 
 export class Bridge {
-    /** @type {import('gi://Gio').default.Settings} */
     _settings;
-    /** @type {InstanceType<typeof Panel> | null} */
     _panel = null;
-    /** @type {import('./injector.js').Injector | null} */
     _injector = null;
-    /** @type {import('./player.js').Player | null} */
     _player = null;
-    /** @type {import('./language.js').Language | null} */
     _language = null;
-    /** @type {InstanceType<typeof import('./keyboard.js').Keyboard>} */
     _keyboard;
-    /** @type {import('gi://St').default.Widget} */
     _box;
-    /** @type {Map<Clutter.Actor, {visibleId: number, destroyId: number}>} */
     _foreign;
-    /** @type {Clutter.Seat} */
     _seat;
     _dismissed = false;
     _ready = false;
     _showing = false;
     _pinned = false;
-    /** @type {{source: any, id: number}[]} */
     _connections = [];
     _movedId = 0;
     _readyId = 0;
-    /** @type {Meta.Window | null} */
+    _reshowId = 0;
+    _fitIndex = -1;
     _focusWindow = null;
-    /** @type {Meta.Window | null} */
     _movedWindow = null;
-    /** @type {number | null} */
     _focusWindowStartY = null;
-    /** @type {Clutter.Actor | null} */
-    _restoring = null;
-    /** @type {{x: number, y: number, width: number, height: number} | null} */
+    _easing = new Set();
     _caret = null;
 
-    /** @param {import('gi://Gio').default.Settings} settings */
     constructor(settings) {
         this._settings = settings;
     }
 
-    /**
-     * @param {any} source
-     * @param {string} signal
-     * @param {(...args: any[]) => any} callback
-     * @returns {number}
-     */
     _track(source, signal, callback) {
         const id = source.connect(signal, callback);
         this._connections.push({source, id});
@@ -97,9 +78,9 @@ export class Bridge {
         this._keyboard.connect(Signal.DISMISS, () => this._hide());
 
         this._box = Main.layoutManager.keyboardBox;
+        this._box.track_hover = false;
         this._box.add_child(this._keyboard);
         this._keyboard.hide();
-        this._keyboard.reactive = false;
 
         this._foreign = new Map();
         for (const child of this._box.get_children()) {
@@ -114,7 +95,7 @@ export class Bridge {
         this._track(this._box, Signal.VISIBLE, () => {
             if (!this._box.visible) {
                 if (this._pinned)
-                    this._show(true);
+                    this._reshow();
                 else if (this._lifted())
                     this._lower();
                 return;
@@ -133,10 +114,12 @@ export class Bridge {
         this._track(Main.layoutManager, Signal.MONITORS, () => this._onMonitorsChanged());
 
         this._track(this._keyboard, Signal.HEIGHT, () => {
-            if (this._box.visible && !this._dismissed) {
-                this._positionKeyboard();
-                this._evaluate();
-            }
+            if (!this._lifted())
+                return;
+            this._positionKeyboard();
+            if (this._focusWindow)
+                this._animateWindow(this._focusWindow, true);
+            this._evaluate();
         });
 
         this._track(global.display, Signal.FOCUS_WINDOW, () => this._onFocusWindow());
@@ -148,8 +131,6 @@ export class Bridge {
             height: rect.get_height(),
         }));
 
-        // Caret source for X11/XWayland clients via IBus (a plain struct). Consumed only
-        // when no Wayland input method holds focus, so the two sources never fight.
         this._track(getIBusManager(), Signal.IBUS_CARET, (_ibus, rect) => {
             if (!Main.inputMethod.currentFocus)
                 this._onCaret(rect);
@@ -157,8 +138,7 @@ export class Bridge {
 
         this._track(global.stage, Signal.FOCUS, () => this._onStageFocus());
 
-        this._panel = new Panel();
-        this._panel.bind(() => this._toggleKeyboard());
+        this._panel = new Panel(() => this._toggleKeyboard());
         Main.panel.addToStatusArea(Indicator.ROLE, this._panel);
 
         this._readyId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, Settle.DELAY, () => {
@@ -176,10 +156,10 @@ export class Bridge {
     }
 
     _onStageFocus() {
-        if (!this._ready || !this._touch())
-            return;
-        if (global.stage.get_key_focus() instanceof Clutter.Text)
+        if (this._ready && this._touch() && global.stage.get_key_focus() instanceof Clutter.Text)
             this._show(false);
+        else
+            this._evaluate();
     }
 
     _touch() {
@@ -187,33 +167,53 @@ export class Bridge {
     }
 
     _onTouchMode() {
-        if (!this._seat.get_touch_mode() && this._keyboard.visible)
+        if (!this._touch() && this._keyboard.visible)
             this._hide();
     }
 
     _onMonitorsChanged() {
         this._keyboard.refit();
-        if (this._box.visible && !this._dismissed) {
+        if (this._lifted()) {
             this._positionKeyboard();
             this._evaluate();
         }
     }
 
-    /** @param {boolean} pinned */
+    _reshow() {
+        if (this._reshowId)
+            return;
+        this._reshowId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this._reshowId = 0;
+            this._show(true);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _cancelReshow() {
+        if (this._reshowId)
+            GLib.source_remove(this._reshowId);
+        this._reshowId = 0;
+    }
+
     _show(pinned) {
+        this._cancelReshow();
         this._pinned = pinned;
         this._dismissed = false;
         this._showing = true;
         this._box.show();
         this._showing = false;
+        if (this._fitIndex !== Main.layoutManager.keyboardIndex) {
+            this._fitIndex = Main.layoutManager.keyboardIndex;
+            this._keyboard.refit();
+        }
         this._keyboard.show();
-        this._keyboard.reactive = true;
         this._positionKeyboard();
         this._evaluate();
     }
 
     _hide() {
         this._pinned = false;
+        this._cancelReshow();
         this._lower();
         this._box.hide();
     }
@@ -223,7 +223,6 @@ export class Bridge {
         this._setFocusWindow(null);
         this._caret = null;
         this._keyboard.reset();
-        this._keyboard.reactive = false;
         this._keyboard.translation_y = 0;
         this._keyboard.hide();
     }
@@ -237,16 +236,16 @@ export class Bridge {
         this._evaluate();
     }
 
-    /** @param {{x: number, y: number, width: number, height: number}} rect */
     _onCaret(rect) {
         this._caret = rect.height > 0 ? rect : null;
         this._evaluate();
     }
 
     _evaluate() {
-        const monitor = Main.layoutManager.primaryMonitor;
+        const monitor = Main.layoutManager.keyboardMonitor;
         const window = global.display.get_focus_window();
-        if (!window || !monitor || !this._lifted()) {
+        if (!window || !monitor || !this._lifted() || global.stage.key_focus ||
+            window.get_monitor() !== Main.layoutManager.keyboardIndex) {
             this._setFocusWindow(null);
             return;
         }
@@ -256,9 +255,7 @@ export class Bridge {
         const top = monitor.y + monitor.height - height;
         const caret = this._caret;
         const frame = window.get_frame_rect();
-        const bottom = caret && caret.height > 0
-            ? caret.y + caret.height
-            : frame.y + frame.height;
+        const bottom = caret ? caret.y + caret.height : frame.y + frame.height;
         if (this._focusWindow === window) {
             if (bottom + height < top)
                 this._setFocusWindow(null);
@@ -270,28 +267,24 @@ export class Bridge {
             this._setFocusWindow(null);
     }
 
-    /** @param {Meta.Window | null} window */
     _setFocusWindow(window) {
-        if (this._focusWindow === window)
+        const actor = window ? window.get_compositor_private() : null;
+        const target = actor ? window : null;
+        if (this._focusWindow === target)
             return;
         if (this._focusWindow)
             this._animateWindow(this._focusWindow, false);
         this._disconnectMoved();
-        const actor = window ? window.get_compositor_private() : null;
-        if (actor && this._restoring === actor)
-            actor.remove_transition('y');
+        if (this._easing.has(actor))
+            actor.remove_transition(Property.Y);
         this._focusWindowStartY = actor ? actor.y : null;
-        if (window && actor) {
-            this._animateWindow(window, true);
-            this._connectMoved(window);
+        if (target) {
+            this._animateWindow(target, true);
+            this._connectMoved(target);
         }
-        this._focusWindow = window;
+        this._focusWindow = target;
     }
 
-    /**
-     * @param {Meta.Window} window
-     * @param {boolean} show
-     */
     _animateWindow(window, show) {
         const actor = window.get_compositor_private();
         if (!actor)
@@ -304,8 +297,6 @@ export class Bridge {
             unmanaged = true;
         });
         const refreshId = actor.connect(Signal.Y, () => this._keyboard.queue_redraw());
-        if (!show)
-            this._restoring = actor;
         actor.ease({
             y: finalY,
             duration: Lift.DURATION,
@@ -313,29 +304,28 @@ export class Bridge {
             onStopped: isFinished => {
                 actor.disconnect(refreshId);
                 window.disconnect(unmanagedId);
-                if (this._restoring === actor)
-                    this._restoring = null;
+                this._easing.delete(actor);
                 if (unmanaged || (show && !isFinished))
                     return;
                 actor.y = finalY;
                 this._sync(window, finalY);
             },
         });
+        if (actor.get_transition(Property.Y))
+            this._easing.add(actor);
     }
 
-    // Disconnect across the call to avoid re-entering the move handler;
-    // reconnect only if this is still the lifted window.
-    /**
-     * @param {Meta.Window} window
-     * @param {number} finalY
-     */
     _sync(window, finalY) {
+        if (window.maximized_vertically || window.is_fullscreen())
+            return;
         const frame = window.get_frame_rect();
         const buffer = window.get_buffer_rect();
         const y = finalY + (frame.y - buffer.y);
-        this._disconnectMoved();
+        const own = window === this._movedWindow;
+        if (own)
+            this._disconnectMoved();
         window.move_frame(true, frame.x, y);
-        if (this._focusWindow === window)
+        if (own && this._focusWindow === window)
             this._connectMoved(window);
     }
 
@@ -345,7 +335,6 @@ export class Bridge {
         this._focusWindowStartY = null;
     }
 
-    /** @param {Meta.Window} window */
     _connectMoved(window) {
         this._disconnectMoved();
         this._movedWindow = window;
@@ -359,18 +348,16 @@ export class Bridge {
         this._movedWindow = null;
     }
 
-    // Instant counterpart of the lift release: no animation may outlive disable().
     _restoreLift() {
-        if (this._restoring)
-            this._restoring.remove_transition('y');
+        for (const actor of this._easing)
+            actor.remove_transition(Property.Y);
         const window = this._focusWindow;
         this._focusWindow = null;
         this._disconnectMoved();
-        if (!window || this._focusWindowStartY === null)
+        if (!window)
             return;
         const actor = window.get_compositor_private();
         if (actor) {
-            actor.remove_transition('y');
             actor.y = this._focusWindowStartY;
             this._sync(window, this._focusWindowStartY);
         }
@@ -383,9 +370,6 @@ export class Bridge {
             this._keyboard.translation_y = -h;
     }
 
-    // GNOME destroys and recreates the stock Keyboard on a11y/touch-mode changes;
-    // drop the handlers then so a queued notify::visible never hits a disposed actor.
-    /** @param {Clutter.Actor} actor */
     _suppress(actor) {
         actor.hide();
         const visibleId = actor.connect(Signal.VISIBLE, () => {
@@ -402,6 +386,7 @@ export class Bridge {
     deactivate() {
         this._panel.destroy();
         this._panel = null;
+        this._cancelReshow();
         if (this._readyId) {
             GLib.source_remove(this._readyId);
             this._readyId = 0;
@@ -417,13 +402,13 @@ export class Bridge {
         }
         this._foreign.clear();
 
-        this._keyboard.translation_y = 0;
         this._keyboard.release();
         this._box.remove_child(this._keyboard);
         this._keyboard.destroy();
         this._keyboard = null;
+        this._box.visible = Boolean(Main.keyboard.visible);
+        this._box.track_hover = true;
 
-        this._language.destroy();
         this._language = null;
         this._injector.destroy();
         this._injector = null;

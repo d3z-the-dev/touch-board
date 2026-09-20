@@ -16,7 +16,7 @@ const gjsGlobals = {
 
 export default [
     {
-        ignores: ['node_modules/**', 'dist/**', 'build/**', 'types/**'],
+        ignores: ['node_modules/**', 'dist/**'],
     },
     js.configs.recommended,
     {
@@ -27,9 +27,7 @@ export default [
             globals: gjsGlobals,
         },
         rules: {
-            // tsc (checkJs + noUnusedLocals/Parameters) owns unused detection and,
-            // unlike eslint, understands JSDoc type references such as @type {Meta.Window}.
-            'no-unused-vars': 'off',
+            'no-unused-vars': ['error', {argsIgnorePattern: '^_'}],
         },
     },
     {

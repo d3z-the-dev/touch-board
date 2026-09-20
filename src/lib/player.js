@@ -3,19 +3,17 @@ import Gio from 'gi://Gio';
 
 import {Key, Click} from './settings.js';
 
-/** @typedef {import('gi://Gio').default.Settings} Settings */
-
 const Cache = Object.freeze({DIR: 'touch-board', FILE: 'click.wav'});
 
 const Role = Object.freeze({CLICK: 'Touch Board key click'});
 
+const Signal = Object.freeze({
+    SOUND: `changed::${Key.SOUND}`,
+    VOLUME: `changed::${Key.VOLUME}`,
+});
+
 const Audio = Object.freeze({RATE: 44100, PEAK: 0.9, BITS: 16, CHANNELS: 1});
 
-/** @typedef {{freq: number, glide: number, tau: number, gain: number}} Body */
-/** @typedef {{freq: number, tau: number, gain: number}} Knock */
-/** @typedef {{tau: number, gain: number}} Noise */
-/** @typedef {{body: Body, knock: Knock, noise: Noise, cutoff: number}} Voice */
-/** @type {Readonly<Record<string, Voice>>} */
 const Voices = Object.freeze({
     [Click.THOCK]: {
         body: {freq: 200, glide: -20, tau: 0.009, gain: 1},
@@ -45,49 +43,35 @@ const Voices = Object.freeze({
 
 const Length = Object.freeze({TAILS: 6, MIN: 0.016, MAX: 0.045});
 
-/**
- * @param {number} value
- * @param {number} low
- * @param {number} high
- * @returns {number}
- */
 function clamp(value, low, high) {
     return Math.max(low, Math.min(high, value));
 }
 
 export class Player {
-    /** @param {Settings} settings */
     constructor(settings) {
         this._settings = settings;
         this._sound = global.display.get_sound_player();
         this._cancellable = new Gio.Cancellable();
         this._path = GLib.build_filenamev([GLib.get_user_cache_dir(), Cache.DIR, Cache.FILE]);
-        /** @type {string | null} */
-        this._signature = null;
+        this._ready = false;
+        this._ids = [
+            settings.connect(Signal.SOUND, () => this._prepare()),
+            settings.connect(Signal.VOLUME, () => this._prepare()),
+        ];
+        this._prepare();
+    }
+
+    _prepare() {
+        const volume = this._settings.get_int(Key.VOLUME);
+        this._ready = volume > 0 && this._render(this._settings.get_string(Key.SOUND), volume / 100);
     }
 
     click() {
-        const settings = this._settings;
-        if (!settings.get_boolean(Key.CLICK))
+        if (!this._ready || !this._settings.get_boolean(Key.CLICK))
             return;
-        const volume = settings.get_int(Key.VOLUME);
-        if (volume <= 0)
-            return;
-        const variant = settings.get_string(Key.SOUND);
-        const signature = `${variant}:${volume}`;
-        if (signature !== this._signature) {
-            if (!this._render(variant, volume / 100))
-                return;
-            this._signature = signature;
-        }
-        /** @type {any} */ (this._sound).play_from_file(Gio.File.new_for_path(this._path), Role.CLICK, this._cancellable);
+        this._sound.play_from_file(Gio.File.new_for_path(this._path), Role.CLICK, this._cancellable);
     }
 
-    /**
-     * @param {string} variant
-     * @param {number} volume
-     * @returns {boolean}
-     */
     _render(variant, volume) {
         const voice = Voices[variant];
         const bytes = this._encode(this._synthesise(voice, volume));
@@ -104,11 +88,6 @@ export class Player {
         }
     }
 
-    /**
-     * @param {Voice} voice
-     * @param {number} volume
-     * @returns {Int16Array}
-     */
     _synthesise(voice, volume) {
         const rate = Audio.RATE;
         const step = 1 / rate;
@@ -145,17 +124,13 @@ export class Player {
         return samples;
     }
 
-    /**
-     * @param {Int16Array} samples
-     * @returns {Uint8Array}
-     */
     _encode(samples) {
         const dataSize = samples.length * (Audio.BITS / 8);
         const byteRate = Audio.RATE * Audio.CHANNELS * (Audio.BITS / 8);
         const blockAlign = Audio.CHANNELS * (Audio.BITS / 8);
         const buffer = new ArrayBuffer(44 + dataSize);
         const view = new DataView(buffer);
-        const tag = (/** @type {number} */ offset, /** @type {string} */ text) => {
+        const tag = (offset, text) => {
             for (let index = 0; index < text.length; index++)
                 view.setUint8(offset + index, text.charCodeAt(index));
         };
@@ -178,6 +153,8 @@ export class Player {
     }
 
     destroy() {
+        for (const id of this._ids)
+            this._settings.disconnect(id);
         this._cancellable.cancel();
     }
 }

@@ -1,9 +1,5 @@
 import {Code} from './codes.js';
 
-/** @typedef {Record<number, string>} Level */
-/** @typedef {{base: Level, shift?: Level, altgr?: Level, altgrShift?: Level}} Layout */
-
-/** @type {Level} */
 const us = {
     [Code.GRAVE]: '`',
     [Code.N1]: '1', [Code.N2]: '2', [Code.N3]: '3', [Code.N4]: '4', [Code.N5]: '5',
@@ -20,7 +16,6 @@ const us = {
     [Code.COMMA]: ',', [Code.DOT]: '.', [Code.SLASH]: '/',
 };
 
-/** @type {Level} */
 const usShift = {
     [Code.GRAVE]: '~',
     [Code.N1]: '!', [Code.N2]: '@', [Code.N3]: '#', [Code.N4]: '$', [Code.N5]: '%',
@@ -31,20 +26,16 @@ const usShift = {
     [Code.COMMA]: '<', [Code.DOT]: '>', [Code.SLASH]: '?',
 };
 
-/** @type {Level} */
 const gb = {...us, [Code.BACKSLASH]: '#'};
-/** @type {Level} */
 const gbShift = {
     ...usShift,
     [Code.N2]: '"', [Code.N3]: '£', [Code.GRAVE]: '¬',
     [Code.APOSTROPHE]: '@', [Code.BACKSLASH]: '~',
 };
-/** @type {Level} */
 const gbAltgr = {
     [Code.N4]: '€', [Code.GRAVE]: '¦',
 };
 
-/** @type {Level} */
 const de = {
     [Code.GRAVE]: '^',
     [Code.N1]: '1', [Code.N2]: '2', [Code.N3]: '3', [Code.N4]: '4', [Code.N5]: '5',
@@ -60,7 +51,6 @@ const de = {
     [Code.N]: 'n', [Code.M]: 'm',
     [Code.COMMA]: ',', [Code.DOT]: '.', [Code.SLASH]: '-',
 };
-/** @type {Level} */
 const deShift = {
     [Code.GRAVE]: '°',
     [Code.N1]: '!', [Code.N2]: '"', [Code.N3]: '§', [Code.N4]: '$', [Code.N5]: '%',
@@ -69,7 +59,6 @@ const deShift = {
     [Code.RBRACKET]: '*', [Code.BACKSLASH]: '\'',
     [Code.COMMA]: ';', [Code.DOT]: ':', [Code.SLASH]: '_',
 };
-/** @type {Level} */
 const deAltgr = {
     [Code.N2]: '²', [Code.N3]: '³',
     [Code.N7]: '{', [Code.N8]: '[', [Code.N9]: ']', [Code.N0]: '}',
@@ -77,7 +66,6 @@ const deAltgr = {
     [Code.M]: 'µ',
 };
 
-/** @type {Level} */
 const ru = {
     [Code.GRAVE]: 'ё',
     [Code.Q]: 'й', [Code.W]: 'ц', [Code.E]: 'у', [Code.R]: 'к', [Code.T]: 'е',
@@ -91,14 +79,12 @@ const ru = {
     [Code.COMMA]: 'б', [Code.DOT]: 'ю', [Code.SLASH]: '.',
 };
 
-/** @type {Level} */
 const ruShift = {
     [Code.N1]: '!', [Code.N2]: '"', [Code.N3]: '№', [Code.N4]: ';', [Code.N5]: '%',
     [Code.N6]: ':', [Code.N7]: '?', [Code.N8]: '*', [Code.N9]: '(', [Code.N0]: ')',
     [Code.MINUS]: '_', [Code.EQUAL]: '+', [Code.SLASH]: ',',
 };
 
-/** @type {Level} */
 const ua = {
     [Code.GRAVE]: 'ʼ',
     [Code.Q]: 'й', [Code.W]: 'ц', [Code.E]: 'у', [Code.R]: 'к', [Code.T]: 'е',
@@ -114,18 +100,15 @@ const ua = {
 
 const uaShift = ruShift;
 
-/** @type {Level} */
 const plAltgr = {
     [Code.A]: 'ą', [Code.C]: 'ć', [Code.E]: 'ę', [Code.L]: 'ł', [Code.N]: 'ń',
     [Code.O]: 'ó', [Code.S]: 'ś', [Code.X]: 'ź', [Code.Z]: 'ż',
 };
-/** @type {Level} */
 const plAltgrShift = {
     [Code.A]: 'Ą', [Code.C]: 'Ć', [Code.E]: 'Ę', [Code.L]: 'Ł', [Code.N]: 'Ń',
     [Code.O]: 'Ó', [Code.S]: 'Ś', [Code.X]: 'Ź', [Code.Z]: 'Ż',
 };
 
-/** @type {Level} */
 const es = {
     [Code.GRAVE]: 'º',
     [Code.N1]: '1', [Code.N2]: '2', [Code.N3]: '3', [Code.N4]: '4', [Code.N5]: '5',
@@ -142,7 +125,6 @@ const es = {
     [Code.N]: 'n', [Code.M]: 'm',
     [Code.COMMA]: ',', [Code.DOT]: '.', [Code.SLASH]: '-',
 };
-/** @type {Level} */
 const esShift = {
     [Code.GRAVE]: 'ª',
     [Code.N1]: '!', [Code.N2]: '"', [Code.N3]: '·', [Code.N4]: '$', [Code.N5]: '%',
@@ -152,7 +134,6 @@ const esShift = {
     [Code.APOSTROPHE]: '¨', [Code.BACKSLASH]: 'Ç',
     [Code.COMMA]: ';', [Code.DOT]: ':', [Code.SLASH]: '_',
 };
-/** @type {Level} */
 const esAltgr = {
     [Code.GRAVE]: '\\',
     [Code.N1]: '|', [Code.N2]: '@', [Code.N3]: '#', [Code.N4]: '~',
@@ -161,7 +142,6 @@ const esAltgr = {
     [Code.APOSTROPHE]: '{', [Code.BACKSLASH]: '}',
 };
 
-/** @type {Level} */
 const fr = {
     [Code.GRAVE]: '²',
     [Code.N1]: '&', [Code.N2]: 'é', [Code.N3]: '"', [Code.N4]: '\'', [Code.N5]: '(',
@@ -178,7 +158,6 @@ const fr = {
     [Code.N]: 'n', [Code.M]: ',',
     [Code.COMMA]: ';', [Code.DOT]: ':', [Code.SLASH]: '!',
 };
-/** @type {Level} */
 const frShift = {
     [Code.N1]: '1', [Code.N2]: '2', [Code.N3]: '3', [Code.N4]: '4', [Code.N5]: '5',
     [Code.N6]: '6', [Code.N7]: '7', [Code.N8]: '8', [Code.N9]: '9', [Code.N0]: '0',
@@ -187,14 +166,12 @@ const frShift = {
     [Code.APOSTROPHE]: '%', [Code.BACKSLASH]: 'µ',
     [Code.M]: '?', [Code.COMMA]: '.', [Code.DOT]: '/', [Code.SLASH]: '§',
 };
-/** @type {Level} */
 const frAltgr = {
     [Code.N2]: '~', [Code.N3]: '#', [Code.N4]: '{', [Code.N5]: '[', [Code.N6]: '|',
     [Code.N7]: '`', [Code.N8]: '\\', [Code.N9]: '^', [Code.N0]: '@',
     [Code.MINUS]: ']', [Code.EQUAL]: '}', [Code.E]: '€',
 };
 
-/** @type {Level} */
 const cz = {
     [Code.GRAVE]: ';',
     [Code.N1]: '+', [Code.N2]: 'ě', [Code.N3]: 'š', [Code.N4]: 'č', [Code.N5]: 'ř',
@@ -210,7 +187,6 @@ const cz = {
     [Code.N]: 'n', [Code.M]: 'm',
     [Code.COMMA]: ',', [Code.DOT]: '.', [Code.SLASH]: '-',
 };
-/** @type {Level} */
 const czShift = {
     [Code.GRAVE]: '°',
     [Code.N1]: '1', [Code.N2]: '2', [Code.N3]: '3', [Code.N4]: '4', [Code.N5]: '5',
@@ -220,12 +196,10 @@ const czShift = {
     [Code.SEMICOLON]: '"', [Code.APOSTROPHE]: '!', [Code.BACKSLASH]: '\'',
     [Code.COMMA]: '?', [Code.DOT]: ':', [Code.SLASH]: '_',
 };
-/** @type {Level} */
 const czAltgr = {
     [Code.E]: '€',
 };
 
-/** @type {Level} */
 const it = {
     [Code.GRAVE]: '\\',
     [Code.N1]: '1', [Code.N2]: '2', [Code.N3]: '3', [Code.N4]: '4', [Code.N5]: '5',
@@ -241,7 +215,6 @@ const it = {
     [Code.N]: 'n', [Code.M]: 'm',
     [Code.COMMA]: ',', [Code.DOT]: '.', [Code.SLASH]: '-',
 };
-/** @type {Level} */
 const itShift = {
     [Code.GRAVE]: '|',
     [Code.N1]: '!', [Code.N2]: '"', [Code.N3]: '£', [Code.N4]: '$', [Code.N5]: '%',
@@ -251,14 +224,12 @@ const itShift = {
     [Code.SEMICOLON]: 'ç', [Code.APOSTROPHE]: '°', [Code.BACKSLASH]: '§',
     [Code.COMMA]: ';', [Code.DOT]: ':', [Code.SLASH]: '_',
 };
-/** @type {Level} */
 const itAltgr = {
     [Code.E]: '€',
     [Code.LBRACKET]: '[', [Code.RBRACKET]: ']',
     [Code.SEMICOLON]: '@', [Code.APOSTROPHE]: '#',
 };
 
-/** @type {Level} */
 const pt = {
     [Code.GRAVE]: '\\',
     [Code.N1]: '1', [Code.N2]: '2', [Code.N3]: '3', [Code.N4]: '4', [Code.N5]: '5',
@@ -274,7 +245,6 @@ const pt = {
     [Code.N]: 'n', [Code.M]: 'm',
     [Code.COMMA]: ',', [Code.DOT]: '.', [Code.SLASH]: '-',
 };
-/** @type {Level} */
 const ptShift = {
     [Code.GRAVE]: '|',
     [Code.N1]: '!', [Code.N2]: '"', [Code.N3]: '#', [Code.N4]: '$', [Code.N5]: '%',
@@ -284,14 +254,12 @@ const ptShift = {
     [Code.APOSTROPHE]: 'ª', [Code.BACKSLASH]: '^',
     [Code.COMMA]: ';', [Code.DOT]: ':', [Code.SLASH]: '_',
 };
-/** @type {Level} */
 const ptAltgr = {
     [Code.N2]: '@', [Code.N3]: '£', [Code.N4]: '§',
     [Code.N7]: '{', [Code.N8]: '[', [Code.N9]: ']', [Code.N0]: '}',
     [Code.E]: '€',
 };
 
-/** @type {Level} */
 const ko = {
     ...us,
     [Code.Q]: 'ㅂ', [Code.W]: 'ㅈ', [Code.E]: 'ㄷ', [Code.R]: 'ㄱ', [Code.T]: 'ㅅ',
@@ -301,14 +269,12 @@ const ko = {
     [Code.Z]: 'ㅋ', [Code.X]: 'ㅌ', [Code.C]: 'ㅊ', [Code.V]: 'ㅍ', [Code.B]: 'ㅠ',
     [Code.N]: 'ㅜ', [Code.M]: 'ㅡ',
 };
-/** @type {Level} */
 const koShift = {
     ...usShift,
     [Code.Q]: 'ㅃ', [Code.W]: 'ㅉ', [Code.E]: 'ㄸ', [Code.R]: 'ㄲ', [Code.T]: 'ㅆ',
     [Code.O]: 'ㅒ', [Code.P]: 'ㅖ',
 };
 
-/** @type {Record<string, Layout>} */
 const layouts = {
     us: {base: us, shift: usShift},
     gb: {base: gb, shift: gbShift, altgr: gbAltgr},
@@ -326,41 +292,22 @@ const layouts = {
     ko: {base: ko, shift: koShift},
 };
 
-/** @type {Record<string, string>} */
 const alias = {uk: 'ua', jp: 'ja', kr: 'ko', cn: 'zh'};
 
-/**
- * @param {string} layoutId
- * @returns {Layout}
- */
 function resolve(layoutId) {
     return layouts[layoutId] ?? layouts[alias[layoutId]] ?? layouts.us;
 }
 
-/**
- * @param {string} layoutId
- * @returns {boolean}
- */
 export function supports(layoutId) {
     return Object.hasOwn(layouts, layoutId) || Object.hasOwn(alias, layoutId);
 }
 
 const CJK = new Set(['ja', 'jp', 'zh', 'cn', 'ko', 'kr']);
 
-/**
- * @param {string} layoutId
- * @returns {boolean}
- */
 export function cjk(layoutId) {
     return CJK.has(layoutId);
 }
 
-/**
- * @param {string} layoutId
- * @param {number} code
- * @param {{shift?: boolean, altgr?: boolean}} [level]
- * @returns {string}
- */
 export function glyphFor(layoutId, code, level = {}) {
     const layout = resolve(layoutId);
     if (level.altgr) {
@@ -379,11 +326,6 @@ export function glyphFor(layoutId, code, level = {}) {
     return upper !== base ? upper : base;
 }
 
-/**
- * @param {number} code
- * @param {boolean} shift
- * @returns {string}
- */
 export function position(code, shift) {
     return glyphFor('us', code, {shift});
 }

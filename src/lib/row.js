@@ -6,43 +6,33 @@ const Style = Object.freeze({ROW: 'touch-board-row'});
 
 export const Row = GObject.registerClass(
 class Row extends St.Widget {
-    /** @param {number} total */
     _init(total) {
         super._init({style_class: Style.ROW, x_expand: true});
         this._total = total;
         this._height = 0;
         this._gap = 0;
-        /** @type {number[]} */
         this._spans = [];
-        /** @type {number[]} */
         this._rowspans = [];
     }
 
-    /**
-     * @param {number} height
-     * @param {number} gap
-     */
     setMetrics(height, gap) {
+        if (height === this._height && gap === this._gap)
+            return;
         this._height = height;
         this._gap = gap;
         this.queue_relayout();
     }
 
-    /**
-     * @param {Clutter.Actor} actor
-     * @param {number} span
-     * @param {number} [rows]
-     */
     append(actor, span, rows = 1) {
         this._spans.push(span);
         this._rowspans.push(rows);
         this.add_child(actor);
     }
 
-    /**
-     * @param {number} _forWidth
-     * @returns {[number, number]}
-     */
+    vfunc_get_preferred_width() {
+        return [0, 0];
+    }
+
     vfunc_get_preferred_height(_forWidth) {
         const height = this._height;
         if (height > 0)
@@ -57,7 +47,6 @@ class Row extends St.Widget {
         return [min, nat];
     }
 
-    /** @param {Clutter.ActorBox} box */
     vfunc_allocate(box) {
         const {_total: total, _spans: spans, _rowspans: rowspans, _gap: gap} = this;
         this.set_allocation(box);

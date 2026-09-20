@@ -1,11 +1,12 @@
 // Validate src/metadata.json against the extensions.gnome.org requirements.
 // Run by CI; fails the build on a malformed or unpublishable manifest.
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const path = join(here, '..', 'src', 'metadata.json');
+const src = join(here, '..', 'src');
+const path = join(src, 'metadata.json');
 
 const errors = [];
 
@@ -15,6 +16,17 @@ try {
 } catch (cause) {
     console.error(`metadata.json is not valid JSON: ${cause.message}`);
     process.exit(1);
+}
+
+const allowed = new Set([
+    'uuid', 'name', 'description', 'shell-version', 'url', 'settings-schema',
+    'gettext-domain', 'version-name', 'session-modes', 'donations',
+]);
+for (const key of Object.keys(manifest)) {
+    if (key === 'version')
+        errors.push('"version" is set by extensions.gnome.org; remove it');
+    else if (!allowed.has(key))
+        errors.push(`unknown field: "${key}"`);
 }
 
 const required = ['uuid', 'name', 'description', 'shell-version', 'settings-schema', 'url'];
@@ -35,6 +47,27 @@ if (uuid) {
 const versions = manifest['shell-version'];
 if (!Array.isArray(versions) || versions.length === 0)
     errors.push('"shell-version" must be a non-empty array');
+else if (!versions.every(version => /^[1-9][0-9]*$/.test(version)))
+    errors.push(`"shell-version" entries must be stable majors such as "50": ${versions.join(', ')}`);
+
+const modes = manifest['session-modes'];
+if (modes !== undefined) {
+    if (!Array.isArray(modes) || !modes.every(mode => mode === 'user' || mode === 'unlock-dialog'))
+        errors.push('"session-modes" may only contain "user" and "unlock-dialog"');
+    else if (!modes.includes('unlock-dialog'))
+        errors.push('"session-modes" without "unlock-dialog" is the default; remove the field');
+}
+
+const schema = manifest['settings-schema'] ?? '';
+if (schema) {
+    if (!schema.startsWith('org.gnome.shell.extensions.'))
+        errors.push(`settings-schema "${schema}" must start with org.gnome.shell.extensions.`);
+    const xml = join(src, 'schemas', `${schema}.gschema.xml`);
+    if (!existsSync(xml))
+        errors.push(`schemas/${schema}.gschema.xml is missing`);
+    else if (!readFileSync(xml, 'utf8').includes(`<schema id="${schema}"`))
+        errors.push(`schemas/${schema}.gschema.xml does not define schema id "${schema}"`);
+}
 
 const url = manifest.url ?? '';
 if (url && !/^https?:\/\//.test(url))

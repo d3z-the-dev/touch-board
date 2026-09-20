@@ -20,17 +20,6 @@ export const Key = Object.freeze({
 
 export const Default = Object.freeze({COLOR: '#8a8a8e'});
 
-export const Bound = Object.freeze({
-    HEIGHT_MIN: 18,
-    HEIGHT_MAX: 60,
-    SPACING_MIN: 0,
-    SPACING_MAX: 100,
-    GLYPH_MIN: 75,
-    GLYPH_MAX: 135,
-    VOLUME_MIN: 0,
-    VOLUME_MAX: 100,
-});
-
 export const Click = Object.freeze({
     THOCK: 'thock',
     CLICK: 'click',
@@ -62,8 +51,6 @@ export const Mode = Object.freeze({
     TOGGLE: 'toggle',
 });
 
-/** @typedef {{id: string, label: string, code: number}} Slot */
-/** @type {readonly Slot[]} */
 export const Slots = Object.freeze([
     {id: 'f1', label: 'F1', code: Code.F1},
     {id: 'f2', label: 'F2', code: Code.F2},
@@ -79,8 +66,6 @@ export const Slots = Object.freeze([
     {id: 'f12', label: 'F12', code: Code.F12},
 ]);
 
-/** @typedef {{id: string, name: string, face: string, code: number}} FunctionSpec */
-/** @type {readonly FunctionSpec[]} */
 export const Functions = Object.freeze([
     {id: 'volume-up', name: 'Volume up', face: 'Vol+', code: Code.VOLUMEUP},
     {id: 'volume-down', name: 'Volume down', face: 'Vol−', code: Code.VOLUMEDOWN},
@@ -100,16 +85,10 @@ export const Functions = Object.freeze([
     {id: 'print', name: 'Print screen', face: 'PrtSc', code: Code.PRINT},
 ]);
 
-/**
- * @param {string} id
- * @returns {FunctionSpec | undefined}
- */
 export function functionFor(id) {
     return Functions.find(entry => entry.id === id);
 }
 
-/** @typedef {{slot: string, face: string, code: number}} MediaSpec */
-/** @type {readonly MediaSpec[]} */
 export const Media = Object.freeze([
     {slot: 'f1', face: 'Bri−', code: Code.BRIGHTNESSDOWN},
     {slot: 'f2', face: 'Bri+', code: Code.BRIGHTNESSUP},
@@ -125,10 +104,6 @@ export const Media = Object.freeze([
     {slot: 'f12', face: 'Vol+', code: Code.VOLUMEUP},
 ]);
 
-/**
- * @param {string} slot
- * @returns {MediaSpec | undefined}
- */
 export function mediaFor(slot) {
     return Media.find(entry => entry.slot === slot);
 }

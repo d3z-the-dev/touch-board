@@ -13,29 +13,22 @@ const Variants = Object.freeze({
     z: 'žźż',
 });
 
-const UNICODE = 0x01000000;
+const Keysym = Object.freeze({UNICODE: 0x01000000});
 
-/** @typedef {{label: string, keyval: number}} Accent */
-
-/**
- * @param {string} face
- * @returns {Accent[] | null}
- */
 export function accentsFor(face) {
     if (!face)
         return null;
     const base = face.toLowerCase();
-    const variants = /** @type {Record<string, string>} */ (Variants)[base];
+    const variants = Variants[base];
     if (!variants)
         return null;
     const upper = face !== base;
-    /** @type {Accent[]} */
     const accents = [];
     for (const character of variants) {
         let glyph = upper ? character.toUpperCase() : character;
         if ([...glyph].length !== 1)
             glyph = character;
-        accents.push({label: glyph, keyval: UNICODE | glyph.codePointAt(0)});
+        accents.push({label: glyph, keyval: Keysym.UNICODE | glyph.codePointAt(0)});
     }
     return accents;
 }

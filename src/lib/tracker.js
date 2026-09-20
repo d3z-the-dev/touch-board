@@ -6,13 +6,7 @@ const Signal = Object.freeze({
     TOUCH: 'touch-event',
 });
 
-/**
- * @param {import('gi://St').default.Button} button
- * @param {{onDown: () => void, onUp: (x: number, y: number) => void, onMove?: (x: number, y: number) => void, click: () => void, active: string}} context
- * @returns {() => void} cancel: drop the press without firing onUp.
- */
-export function track(button, {onDown, onUp, onMove, click, active}) {
-    /** @type {number | null} */
+export function track(button, {onDown, onUp, onMove, onCancel, click, active}) {
     let slot = null;
     let pressed = false;
     let x = 0;
@@ -32,11 +26,16 @@ export function track(button, {onDown, onUp, onMove, click, active}) {
         button.remove_style_pseudo_class(active);
         onUp(x, y);
     };
+    const drop = () => {
+        if (!pressed)
+            return;
+        pressed = false;
+        button.remove_style_pseudo_class(active);
+        if (onCancel)
+            onCancel();
+    };
     const cancel = () => {
-        if (pressed) {
-            pressed = false;
-            button.remove_style_pseudo_class(active);
-        }
+        drop();
         slot = null;
     };
     button.connect(Signal.PRESS, (_actor, event) => {
@@ -65,11 +64,16 @@ export function track(button, {onDown, onUp, onMove, click, active}) {
                 if (onMove)
                     onMove(x, y);
             }
-        } else if (type === Clutter.EventType.TOUCH_END || type === Clutter.EventType.TOUCH_CANCEL) {
+        } else if (type === Clutter.EventType.TOUCH_END) {
             if (slot === null || slot === id) {
                 [x, y] = event.get_coords();
                 release();
             }
+            if (slot === id)
+                slot = null;
+        } else if (type === Clutter.EventType.TOUCH_CANCEL) {
+            if (slot === null || slot === id)
+                drop();
             if (slot === id)
                 slot = null;
         }

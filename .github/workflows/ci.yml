@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: [master]
   pull_request:
   workflow_call:
 
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    name: Lint, type-check & pack
+    name: Lint & pack
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,9 +31,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-
-      - name: Type-check
-        run: npm run check
 
       - name: Install packaging tools
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-bin zip

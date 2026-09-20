@@ -1,185 +1,58 @@
 import {Code, Kind} from './codes.js';
 import {Layout} from './settings.js';
 
-/**
- * @typedef {object} KeySpec
- * @property {string} kind       One of the Kind.* behaviours.
- * @property {number} span       Relative grid width in layout units.
- * @property {number} [code]     evdev key code; absent for keys that inject nothing.
- * @property {string} [label]    Static face; absent when it follows the active layout.
- * @property {boolean} [glyph]   Face is taken from the active language map.
- * @property {boolean} [compact] Shrunk face for the narrow function row.
- * @property {boolean} [light]   Force the lighter input tile, overriding the kind's default tone.
- * @property {string} [fslot]    Function-row slot id; the key is reassignable.
- * @property {string} [symbol]   Compact glyph shown in place of a word label when
- *                               the tile is too small to fit the word.
- * @property {number} [rows]     Vertical span in grid rows (default 1); the cells below must be spacers.
- * @property {PadFace} [pad]     For a Kind.PAD key: the numeric and navigation
- *                               faces/keysyms the Num mode switches between.
- * @property {FnFace} [fn]       Alternate face/code shown and injected while the
- *                               Fn layer is engaged.
- */
-
-/**
- * @typedef {object} FnFace
- * @property {number} code        evdev code injected while Fn is engaged.
- * @property {string} face        Glyph drawn while Fn is engaged.
- * @property {string} [symbol]    Compact glyph when the tile is too narrow for face.
- */
-
-/**
- * @typedef {object} Face
- * @property {string} face        Glyph drawn on the key.
- * @property {number} [code]      evdev code injected; absent injects nothing.
- */
-
-/**
- * @typedef {object} NavFace
- * @property {string} word        Full word, or arrow glyph, drawn when it fits the tile.
- * @property {string} symbol      Compact symbol drawn when the word will not fit.
- * @property {number} [code]      evdev code injected; absent injects nothing.
- */
-
-/**
- * @typedef {object} PadFace
- * @property {Face} numeric       Digit face and code (numeric mode).
- * @property {NavFace} nav        Navigation face and code (navigation mode).
- */
-
-/**
- * @param {number} code
- * @param {string} label
- * @param {number} [span]
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
 function key(code, label, span = 1, symbol) {
     return {code, label, span, kind: Kind.KEY, symbol};
 }
 
-/**
- * @param {number} code
- * @param {string} label
- * @param {number} [span]
- * @param {string} [slot]
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
 function fkey(code, label, span = 1, slot, symbol) {
     return {code, label, span, kind: Kind.KEY, compact: true, fslot: slot, symbol};
 }
 
-/**
- * @param {number} code
- * @param {number} [span]
- * @returns {KeySpec}
- */
 function glyph(code, span = 1) {
     return {code, span, kind: Kind.KEY, glyph: true};
 }
 
-/**
- * @param {number} code
- * @param {string} label
- * @param {number} [span]
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
 function modifier(code, label, span = 1, symbol) {
     return {code, label, span, kind: Kind.MODIFIER, symbol};
 }
 
-/**
- * @param {number} code
- * @param {string} label
- * @param {number} [span]
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
 function lock(code, label, span = 1, symbol) {
     return {code, label, span, kind: Kind.LOCK, symbol};
 }
 
-/**
- * @param {string} label
- * @param {number} [span]
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
 function num(label, span = 1, symbol) {
     return {label, span, kind: Kind.NUM, symbol};
 }
 
-/**
- * @param {string} label
- * @param {number} [span]
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
 function fn(label, span = 1, symbol) {
     return {label, span, kind: Kind.FN, symbol};
 }
 
-/**
- * @param {string} digit       Numeric face.
- * @param {number} numeric     Numeric evdev code (Code.N*).
- * @param {string} word        Navigation face: full word, or arrow glyph.
- * @param {string} symbol      Navigation face: compact symbol shown when the word will not fit.
- * @param {number} [nav]       Navigation evdev code; omit for a key that navigates to nothing.
- * @param {number} [span]
- * @returns {KeySpec}
- */
 function pad(digit, numeric, word, symbol, nav, span = 1) {
     return {span, kind: Kind.PAD, pad: {numeric: {face: digit, code: numeric}, nav: {word, symbol, code: nav}}};
 }
 
-/**
- * @param {string} label
- * @param {number} [span]
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
 function hide(label, span = 1, symbol) {
     return {label, span, kind: Kind.HIDE, compact: true, symbol};
 }
 
-/**
- * @param {number} span
- * @returns {KeySpec}
- */
 function spacer(span) {
     return {span, kind: Kind.SPACER};
 }
 
-/**
- * @param {KeySpec} spec
- * @param {number} rows
- * @returns {KeySpec}
- */
 function tall(spec, rows) {
     return {...spec, rows};
 }
 
-/**
- * @param {KeySpec} spec
- * @returns {KeySpec}
- */
 function light(spec) {
     return {...spec, light: true};
 }
 
-/**
- * @param {KeySpec} spec
- * @param {number} code
- * @param {string} face
- * @param {string} [symbol]
- * @returns {KeySpec}
- */
-function withFn(spec, code, face, symbol) {
-    return {...spec, fn: {code, face, symbol}};
+function withFn(spec, code, face, symbol, slot) {
+    return {...spec, fn: {code, face, symbol, slot}};
 }
 
-/** @type {KeySpec[][]} */
 const standard = [
     [
         fkey(Code.ESC, 'Esc', 1, undefined, '⎋'),
@@ -232,16 +105,15 @@ const standard = [
     ],
 ];
 
-/** @type {KeySpec[][]} */
 const compact = [
     [
         withFn(key(Code.ESC, 'Esc', 1, '⎋'), Code.GRAVE, '`'),
-        withFn(glyph(Code.N1), Code.F1, 'F1'), withFn(glyph(Code.N2), Code.F2, 'F2'),
-        withFn(glyph(Code.N3), Code.F3, 'F3'), withFn(glyph(Code.N4), Code.F4, 'F4'),
-        withFn(glyph(Code.N5), Code.F5, 'F5'), withFn(glyph(Code.N6), Code.F6, 'F6'),
-        withFn(glyph(Code.N7), Code.F7, 'F7'), withFn(glyph(Code.N8), Code.F8, 'F8'),
-        withFn(glyph(Code.N9), Code.F9, 'F9'), withFn(glyph(Code.N0), Code.F10, 'F10'),
-        withFn(glyph(Code.MINUS), Code.F11, 'F11'), withFn(glyph(Code.EQUAL), Code.F12, 'F12'),
+        withFn(glyph(Code.N1), Code.F1, 'F1', undefined, 'f1'), withFn(glyph(Code.N2), Code.F2, 'F2', undefined, 'f2'),
+        withFn(glyph(Code.N3), Code.F3, 'F3', undefined, 'f3'), withFn(glyph(Code.N4), Code.F4, 'F4', undefined, 'f4'),
+        withFn(glyph(Code.N5), Code.F5, 'F5', undefined, 'f5'), withFn(glyph(Code.N6), Code.F6, 'F6', undefined, 'f6'),
+        withFn(glyph(Code.N7), Code.F7, 'F7', undefined, 'f7'), withFn(glyph(Code.N8), Code.F8, 'F8', undefined, 'f8'),
+        withFn(glyph(Code.N9), Code.F9, 'F9', undefined, 'f9'), withFn(glyph(Code.N0), Code.F10, 'F10', undefined, 'f10'),
+        withFn(glyph(Code.MINUS), Code.F11, 'F11', undefined, 'f11'), withFn(glyph(Code.EQUAL), Code.F12, 'F12', undefined, 'f12'),
         withFn(key(Code.BACKSPACE, 'Backspace', 2, '⌫'), Code.DELETE, 'Del'),
     ],
     [
@@ -277,7 +149,6 @@ const compact = [
     ],
 ];
 
-/** @type {KeySpec[][]} */
 const full = [
     [
         fkey(Code.ESC, 'Esc', 1, undefined, '⎋'), spacer(1),
@@ -356,7 +227,6 @@ const full = [
     ],
 ];
 
-/** @type {Record<string, KeySpec[][]>} */
 export const profiles = Object.freeze({
     [Layout.COMPACT]: compact,
     [Layout.STANDARD]: standard,

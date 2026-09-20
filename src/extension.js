@@ -3,7 +3,6 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {Bridge} from './lib/bridge.js';
 
 export default class TouchBoard extends Extension {
-    /** @type {Bridge | null} */
     _bridge = null;
 
     enable() {

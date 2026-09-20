@@ -5,7 +5,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$ROOT/src"
-BUILD="$ROOT/build"
 DIST="$ROOT/dist"
 
 UUID="$(sed -n 's/.*"uuid"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$SRC/metadata.json")"
@@ -14,12 +13,9 @@ if [ -z "$UUID" ]; then
     exit 1
 fi
 
-rm -rf "$BUILD"
-mkdir -p "$BUILD" "$DIST"
-cp -r "$SRC/." "$BUILD/"
-
+mkdir -p "$DIST"
 ZIP="$DIST/$UUID.shell-extension.zip"
 rm -f "$ZIP"
-(cd "$BUILD" && zip -qr "$ZIP" . -x '*.DS_Store' -x 'schemas/gschemas.compiled')
+(cd "$SRC" && zip -qr "$ZIP" . -x 'schemas/gschemas.compiled')
 
 echo "pack: wrote $ZIP"

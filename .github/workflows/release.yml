@@ -12,8 +12,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  tag:
+    name: Match tag to version-name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare
+        run: |
+          version="v$(node -p "require('./src/metadata.json')['version-name']")"
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match metadata version-name ($version)" >&2
+            exit 1
+          fi
+
   build:
     name: Validate & pack
+    needs: tag
     uses: ./.github/workflows/ci.yml
 
   publish:

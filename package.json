@@ -1,19 +1,14 @@
 {
   "name": "touch-board-tooling",
-  "version": "0.1.1",
-  "description": "Dev-only type-checking tooling for the Touch Board extension (ships as plain GJS in src/).",
+  "description": "Dev-only lint tooling for the Touch Board extension (ships as plain GJS in src/).",
   "license": "GPL-3.0-or-later",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc --noEmit",
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "@girs/gjs": "4.0.4",
-    "@girs/gnome-shell": "50.0.0",
-    "eslint": "^9.0.0",
-    "typescript": "^6.0.3"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0"
   }
 }
