@@ -7,6 +7,8 @@ _all **keys**, any **layout**, raw **input**_
 
 **`layout profiles`** **`display scaling`** **`smart visibility`** **`evdev injection`** **`xkb tracking`** **`accent popups`** **`modifier modes`** **`fn layer`**
 
+> **GNOME 46 support:** This branch adds compatibility with GNOME Shell 46. See [GNOME 46 support notes](docs/GNOME-46.md) and [Korean input notes](docs/GNOME-46-INPUT.md).
+
 ![GNOME Shell 50](https://img.shields.io/badge/GNOME_Shell-50-4A86CF?logo=gnome&logoColor=white)
 &nbsp;
 ![License GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)
@@ -17,7 +19,7 @@ _all **keys**, any **layout**, raw **input**_
 
 >The stock OSK covers a search box and a password field. Touch Board is a full keyboard for writing, coding, and anything that needs working modifier keys, proper layout support and hardware-level evdev input. The panel button keeps it one tap away on any session, lock screen included.
 
-Requires **GNOME Shell 50**.
+Supports **GNOME Shell 46, 49 and 50**.
 
 ## Highlights
 

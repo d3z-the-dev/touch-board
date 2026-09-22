@@ -94,7 +94,7 @@ class Keyboard extends St.BoxLayout {
     _init(injector, language, settings, player) {
         super._init({
             style_class: Style.KEYBOARD,
-            orientation: Clutter.Orientation.VERTICAL,
+            vertical: true,
             x_expand: true,
             x_align: Clutter.ActorAlign.START,
             reactive: true,
