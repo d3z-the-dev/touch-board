@@ -19,7 +19,10 @@
     <value nick="thock" value="0"/>
     <value nick="click" value="1"/>
     <value nick="tap" value="2"/>
-    <value nick="pop" value="3"/>
+  </enum>
+  <enum id="org.gnome.shell.extensions.touch-board.style">
+    <value nick="modern" value="0"/>
+    <value nick="classic" value="1"/>
   </enum>
   <enum id="org.gnome.shell.extensions.touch-board.corner">
     <value nick="sharp" value="0"/>
@@ -28,9 +31,9 @@
   </enum>
   <schema id="org.gnome.shell.extensions.touch-board" path="/org/gnome/shell/extensions/touch-board/">
     <key name="font" type="s">
-      <default>'IBM Plex Sans'</default>
+      <default>''</default>
       <summary>Key glyph font family</summary>
-      <description>Font family for the key glyphs. The default uses the stylesheet font list with its IBM Plex Sans fallbacks; any other family is used on its own.</description>
+      <description>Font family for the key glyphs. Empty uses IBM Plex Sans when it is installed and the system interface font otherwise.</description>
     </key>
     <key name="fkeys" type="a{ss}">
       <default>{}</default>
@@ -38,9 +41,9 @@
       <description>Maps a function-row slot (f1-f12) to a standard function id. A slot with no entry taps its default function key.</description>
     </key>
     <key name="active-color" type="s">
-      <default>'#8a8a8e'</default>
+      <default>''</default>
       <summary>Engaged-key colour</summary>
-      <description>Hex colour drawn on a one-shot or locked modifier. The locked state uses a brighter shade derived from it.</description>
+      <description>Hex colour of a one-shot or locked modifier. Empty follows the system accent colour (blue on GNOME 46).</description>
     </key>
     <key name="case" enum="org.gnome.shell.extensions.touch-board.case">
       <default>'lowercase'</default>
@@ -70,6 +73,11 @@
       <summary>Font size</summary>
       <description>Font size of the key glyphs as a percent of the default.</description>
     </key>
+    <key name="style" enum="org.gnome.shell.extensions.touch-board.style">
+      <default>'modern'</default>
+      <summary>Keyboard style</summary>
+      <description>Modern is flat and follows the system light or dark scheme. Classic is the original dark look with shaded keys.</description>
+    </key>
     <key name="corner" enum="org.gnome.shell.extensions.touch-board.corner">
       <default>'soft'</default>
       <summary>Key corners</summary>
@@ -97,8 +105,11 @@
     </key>
     <key name="click-sound" enum="org.gnome.shell.extensions.touch-board.click">
       <default>'thock'</default>
+      <aliases>
+        <alias value="pop" target="click"/>
+      </aliases>
       <summary>Click sound</summary>
-      <description>Which synthesised click to play: thock (deep and warm), click (soft and muted), tap (crisp and tactile) or pop (light and high).</description>
+      <description>Which synthesised click to play: thock (soft, deep and muted), click (crisp, clean and short) or tap (warm, round and woody).</description>
     </key>
     <key name="click-volume" type="i">
       <default>35</default>

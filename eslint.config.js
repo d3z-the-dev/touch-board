@@ -28,6 +28,7 @@ export default [
         },
         rules: {
             'no-unused-vars': ['error', {argsIgnorePattern: '^_'}],
+            'no-multiple-empty-lines': ['error', {max: 1}],
         },
     },
     {

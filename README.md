@@ -7,46 +7,39 @@ _all **keys**, any **layout**, raw **input**_
 
 **`layout profiles`** **`display scaling`** **`smart visibility`** **`evdev injection`** **`xkb tracking`** **`accent popups`** **`modifier modes`** **`fn layer`**
 
-![GNOME Shell 46–50](https://img.shields.io/badge/GNOME_Shell-46--50-4A86CF?logo=gnome&logoColor=white)
-&nbsp;
-![License GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)
+[![CI](https://github.com/d3z-the-dev/touch-board/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/d3z-the-dev/touch-board/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/d3z-the-dev/touch-board?label=release&color=2EA44F)](https://github.com/d3z-the-dev/touch-board/releases/latest)
+[![extensions.gnome.org](https://img.shields.io/badge/extensions.gnome.org-Touch_Board-4A86CF?logo=gnome&logoColor=white)](https://extensions.gnome.org/extension/10302/touch-board/)
+![GNOME Shell 46-50](https://img.shields.io/badge/GNOME_Shell-46--50-4A86CF?logo=gnome&logoColor=white)
+[![License GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
 <img src="docs/img/standard.svg" alt="Touch Board, standard profile" width="100%">
 
 </div>
 
->The stock OSK covers a search box and a password field. Touch Board is a full keyboard for writing, coding, and anything that needs working modifier keys, proper layout support and hardware-level evdev input. The panel button keeps it one tap away on any session, lock screen included.
-
-Requires **GNOME Shell 46–50**.
+>The stock OSK covers a search box and a password field. Touch Board is a full keyboard for writing, coding, and anything that needs working modifier keys, proper layout support and hardware-level evdev input.
 
 ## Highlights
 
-- **Built for terminal work and coding.** Everything a physical keyboard has (modifier keys, function row, numpad, navigation) in a touch-native interface.
-- **Hardware-level input.** Keys inject raw Linux evdev codes through a Clutter virtual device. The active xkb layout translates them. Key faces are cosmetic.
-- **Three profiles.** Compact (60%) is the ANSI main block. Standard (75%) adds the F-row, navigation column, and arrow cluster. Full (100%) extends with a numpad. Each scales to fill the display width.
-- **Modifier state machine.** Shift, Ctrl, Alt, Super, and AltGr each arm on lift. Three modes: Hold (tap sends one keystroke, long press locks), Latch (the default: tap arms a one-shot, double tap locks) and Toggle (tap flips a lock). Armed glyph keys preview the shifted or AltGr level.
-- **Fn layer.** A second layer of faces and codes over the entire board, engaged as one-shot or lock. On compact it restores the full nav cluster (F1-F12 on the number row, arrows and nav on UIOP / JKL;). On standard and full it turns F1-F12 into the media row.
-- **Reassignable function row.** Each F1-F12 slot maps independently to volume, brightness, media transport, mic mute, navigation, or editing keys.
-- **Live xkb tracking.** Subscribes to `InputSourceManager` directly. The gsetting lags under Wayland. Bundled glyph maps cover Western and Eastern European layouts plus US English (11 total). Unmapped sources fall back to US faces while injected codes stay correct.
-- **CJK input via IBus.** Chinese (Pinyin), Japanese (Anthy), and Korean (Hangul) compose through `handleVirtualKey`. Ctrl/Alt/Super bypass the engine and take the raw evdev path. No engine installed: US faces and layout-neutral keysyms.
-- **Accent popups.** Long-press a Latin letter to open a variant strip. 12 base letters, 50+ diacritics and symbols. Slide to select, or lift and tap. With accents off, long-press auto-repeats at the desktop cadence instead.
-- **Numpad.** Full profile only. Digit and navigation faces on the same keys. A local Num key switches between them, independent of the system Num Lock.
-- **Caps Lock sync.** Tracks the real system keymap state. Hardware toggles update the key face on the spot.
-- **Window lift.** The focused window slides up by the keyboard height when the keyboard would cover its input. Caret position from the Wayland input method or IBus (X11/XWayland), with the window frame as fallback. Drag the window to release the lift.
-- **Smart visibility.** Opens on text-input-v3 (cooperative apps and prompts), stage key-focus (overview search, auth dialogs), or the panel button. Auto-shows need touch mode (tablet mode, or no mouse or touchpad present) and wait out the 3-second login settle. The panel button bypasses all of this, lock screen included.
-- **Single-anchor scaling.** One root font-size from height-percent of the short display edge. Labels scale with it. A portrait width guard keeps the full layout on screen after rotation.
-- **Customization.** Layout profile, height (18-60%), key spacing, font size (75-135%), key font, label case (upper/title/lower), key corners (sharp/soft/round), rounded keyboard corners, engaged modifier colour, modifier mode (Hold/Latch/Toggle), accent popup, click sound (thock/click/tap/pop) and volume, per-F-key remapping.
+- **Every key a hardware keyboard has.** Modifiers, function row, navigation, arrows and a numpad, sized for fingers.
+- **Hardware-level input.** Keys inject raw evdev codes through a Clutter virtual device, and the active xkb layout translates them, so shortcuts and terminal apps behave as with a real keyboard.
+- **Three profiles.** Compact (60%), Standard (75%) and Full (100%) fill the display width.
+- **Modifier modes.** Shift, Ctrl, Alt, Super, AltGr and Fn work as Hold, Latch or Toggle.
+- **Fn layer and remappable F-row.** Fn brings back what compact drops and turns the F-row into media keys. Each F-key can be remapped.
+- **Live layouts.** Faces follow the active input source: 11 bundled glyph maps, CJK through IBus engines.
+- **Accent popups.** Long-press a Latin letter for its variants.
+- **Smart visibility.** A finger or pen tap on a text field opens it, a mouse click does not, typing on a hardware keyboard closes it.
+- **Window lift.** The focused window moves up so the caret stays visible.
+- **Two styles.** Modern follows the system light or dark scheme and accent colour. Classic keeps the original dark look.
 
 ## Profiles
-
->Each profile is one continuous grid scaled to the display width. Fewer columns means bigger keys.
 
 <details>
 <summary><b>Compact (60%)</b>: the ANSI main block, nothing else</summary>
 
 <img src="docs/img/compact.svg" alt="Touch Board, compact profile" width="100%">
 
-The Fn layer restores everything the 60% block drops: F1-F12 on the number row, nav and arrow cluster on `U I O P` / `J K L ;`, and forward Delete on Backspace.
+The Fn layer brings back the rest.
 </details>
 
 <details>
@@ -54,7 +47,7 @@ The Fn layer restores everything the 60% block drops: F1-F12 on the number row, 
 
 <img src="docs/img/standard.svg" alt="Touch Board, standard profile" width="100%">
 
-Standard adds the function row, a navigation column (PgUp, PgDn, Home, End) and a dedicated arrow cluster. The default profile.
+Adds the function row, a navigation column (PgUp, PgDn, Home, End) and an arrow cluster. The default profile.
 </details>
 
 <details>
@@ -62,27 +55,54 @@ Standard adds the function row, a navigation column (PgUp, PgDn, Home, End) and 
 
 <img src="docs/img/full.svg" alt="Touch Board, full profile" width="100%">
 
-Standard, plus an Ins/Home/PgUp over Del/End/PgDn block, Print / ScrollLock / Pause with a media trio across the top, and a full numpad with dual digit-and-navigation faces.
+Standard plus an Ins/Home/PgUp over Del/End/PgDn block, PrtSc, ScrollLock and Pause with a media trio across the top, and a numpad with digit and navigation faces.
+</details>
+
+## Styles
+
+>Modern is the default and follows the system colour scheme. Classic keeps the look of earlier versions.
+
+<details>
+<summary><b>Dark</b>: modern flat keys in the dark colour scheme</summary>
+
+<img src="docs/img/standard.svg" alt="Touch Board, standard profile, modern style, dark" width="100%">
+
+One-shot modifiers get an outline in the accent colour, locked ones a fill.
+</details>
+
+<details>
+<summary><b>Light</b>: modern flat keys when the system prefers light</summary>
+
+<img src="docs/img/standard-light.svg" alt="Touch Board, standard profile, modern style, light" width="100%">
+
+Same accent outline and fill as Dark.
+</details>
+
+<details>
+<summary><b>Classic</b>: the original dark keyboard with gradient keys</summary>
+
+<img src="docs/img/standard-classic.svg" alt="Touch Board, standard profile, classic style" width="100%">
+
+One-shot modifiers fill with the accent colour, locked ones add a white ring. Classic stays dark in both colour schemes.
 </details>
 
 ## Install
 
+> [!IMPORTANT]
+> Touch Board needs **GNOME Shell 46-50**. On Wayland the shell loads a newly installed or updated copy only after you log out and back in.
+
 ### extensions.gnome.org
 
-Search for **Touch Board** on [extensions.gnome.org](https://extensions.gnome.org/) and
-toggle it on. This is the recommended route and brings automatic updates.
+Install [Touch Board](https://extensions.gnome.org/extension/10302/touch-board/) from extensions.gnome.org and toggle it on. This is the recommended route and brings automatic updates.
 
 ### From a release
 
-Download `touch-board@d3z-the-dev.github.io.shell-extension.zip` from the
-[latest release](https://github.com/d3z-the-dev/touch-board/releases/latest), then:
+Download `touch-board@d3z-the-dev.github.io.shell-extension.zip` from the [latest release](https://github.com/d3z-the-dev/touch-board/releases/latest), then:
 
 ```sh
-gnome-extensions install --force touch-board@d3z-the-dev.github.io.shell-extension.zip
-gnome-extensions enable touch-board@d3z-the-dev.github.io
+gnome-extensions install --force touch-board@d3z-the-dev.github.io.shell-extension.zip   # --force replaces an older copy
+gnome-extensions enable touch-board@d3z-the-dev.github.io   # switch it on
 ```
-
-On Wayland, log out and back in before the shell will load it.
 
 ### From source
 
@@ -90,47 +110,51 @@ On Wayland, log out and back in before the shell will load it.
 make install
 ```
 
-Copies `src/` into your user extensions directory, compiles the schema, and enables the extension. On Wayland log out and back in.
+Copies `src/` into your user extensions directory, compiles the schema, and enables the extension.
 
 ```sh
 make uninstall   # disable and remove
 make enable      # enable an installed copy
-make pack        # build the dist/ zip
+make pack        # build the zip in dist/
 ```
 
 ## Keys
 
-### Fn layer
-
-The Fn key swaps each key's face and code without injecting its own code. Tap, hold and lock follow the configured modifier mode.
-
-On compact, Fn restores the full nav cluster: F1-F12 on the number row, Esc becomes grave/tilde, `U I O P` and `J K L ;` become navigation and arrows, Backspace becomes forward Delete.
-
-On standard and full, Fn turns F1-F12 into a media row: brightness, overview, search, keyboard backlight, transport and volume. A function-row override always wins over Fn.
-
 ### Modifiers
 
-A modifier engages on lift. While armed it wraps each keystroke (press modifier, tap target, release modifier), then drops one-shots and keeps locks.
+A modifier engages on lift. While engaged it wraps each keystroke (press modifier, tap key, release modifier), then drops one-shots and keeps locks.
 
 | Mode   | Tap | Long press | Tap while engaged |
 |--------|-----|------------|-------------------|
 | Hold   | One keystroke | Locks across keys | Clears the lock |
-| Latch  | Arms a one-shot for the next keystroke | (none) | Second tap within the double-tap window promotes to a lock, otherwise clears |
+| Latch  | Arms a one-shot for the next keystroke | (none) | A second tap within the double-tap window locks, a later one clears |
 | Toggle | Flips a lock | (none) | Flips it off |
 
-One-shots light in the engaged colour. Locks use a lighter shade of the same colour. Glyph keys preview the next keystroke level under an armed Shift or AltGr. Caps Lock mirrors the real system keymap and reflects hardware toggles.
+Latch is the default. Glyph keys preview the next level under an armed Shift or AltGr. Caps Lock mirrors the system keymap, hardware toggles included.
+
+> [!NOTE]
+> Hiding the keyboard clears every modifier and the Fn layer, locks included.
+
+### Fn layer
+
+Fn swaps the face and code of the keys it covers and injects nothing itself. It follows the modifier mode.
+
+- **Compact:** F1-F12 on the number row, grave/tilde on Esc, navigation and arrows on `U I O P` / `J K L ;`, forward Delete on Backspace.
+- **Standard and Full:** F1-F12 become a media row: brightness, overview, search, keyboard backlight, transport and volume.
+
+Each F1-F12 slot can be remapped in Preferences to volume, brightness, media, mic mute, navigation or editing keys. A remapped slot wins over Fn.
 
 ### Numpad
 
-Full profile only. Each key carries two faces: digit and navigation. The local Num key flips between them, independent of the system Num Lock. Mode survives a hide.
+Full profile only. Each key has a digit face and a navigation face. The Num key on the keyboard flips between them, independent of the system Num Lock, and the choice survives a hide.
 
 ### Accents
 
-Long-press a Latin letter to open the variant popup. Slide to a variant and release, or lift and tap. Selecting a variant replaces the base committed on press (Backspace + commit). With accents off, held keys auto-repeat instead.
+Long-press one of 12 Latin letters for its variants (50+ diacritics and symbols). Slide to a variant and release, or lift and tap. The variant replaces the letter typed on press. With accent popups off, a held key auto-repeats at the desktop rate instead.
 
 ## Layouts
 
-The keyboard tracks `InputSourceManager` in real time. Glyph maps only pick which face to draw. The xkb layout translates injected evdev codes. A source with no map falls back to US faces, and typing still works.
+Key faces follow the active input source. Glyph maps only choose the face. The xkb layout decides the character, so a source without a map shows US faces and still types correctly.
 
 | Layout       | Code |
 |--------------|------|
@@ -146,9 +170,7 @@ The keyboard tracks `InputSourceManager` in real time. Glyph maps only pick whic
 | Ukrainian    | `ua` |
 | Russian      | `ru` |
 
-GNOME reports some sources under alternate ids: `cn` `jp` `kr` alias to `zh` `ja` `ko`.
-
-CJK sources compose through an IBus engine installed separately:
+CJK sources compose through an IBus engine (GNOME may report them as `cn` `jp` `kr`):
 
 | Layout   | Code | Mode | Engine |
 |----------|------|------|--------|
@@ -156,82 +178,91 @@ CJK sources compose through an IBus engine installed separately:
 | Japanese | `ja` | あ   | Anthy  |
 | Korean   | `ko` | 한   | Hangul |
 
-With an active engine, keystrokes go through `handleVirtualKey` instead of an evdev code. The `ja` and `zh` keys show Latin caps for romaji and pinyin. The `ko` keys show Dubeolsik jamo. Without an engine, CJK sources fall back to US faces and US-position keysyms.
+With an engine active, keys go through `handleVirtualKey` instead of evdev. `ja` and `zh` keys show Latin caps for romaji and pinyin, `ko` keys show Dubeolsik jamo. Ctrl, Alt and Super bypass the engine.
+
+> [!NOTE]
+> The engines are installed separately. Without one, CJK sources fall back to US faces and US-position keysyms.
 
 ## Showing and hiding
 
-Three triggers open it:
+A finger or pen tap on a text field opens the keyboard:
 
-- Cooperative apps and system prompts through text-input-v3 (touch sessions only).
-- Shell-internal fields (overview search, auth dialogs) through stage key-focus.
-- The panel button bypasses all gates and works on any session, lock screen included.
+- **Apps:** fields that request an on-screen keyboard through text-input-v3 (GTK 3 and 4, Qt).
+- **Shell:** overview search, dialogs and the lock-screen password.
 
-Auto-shows need touch mode: tablet mode on, or no mouse or touchpad present. They also wait out a 3-second settle window after login.
+A mouse or touchpad click does not open it, and neither does a tap beside a field or a field that takes focus by itself.
 
-While up, it lifts the focused window by its own height. Caret position from the Wayland input method or IBus (X11/XWayland), with the window frame as fallback. Dragging the window releases the lift.
+It closes on:
+
+- **Hide key or panel button.** Tap a field to bring it back.
+- **Focus loss.** Only when a tap opened it. Opened from the panel button, it stays up.
+- **Hardware keyboard.** The first key from a USB or Bluetooth keyboard that edits the field or moves the caret. Power, volume and brightness buttons don't count, and neither does switching the layout with Super+Space.
+
+While it is up, the focused window moves up by the keyboard height if the keyboard would cover the caret. Dragging the window cancels the lift.
+
+> [!TIP]
+> The panel button opens the keyboard anywhere, the lock screen included, and keeps it up until you close it. With **Screen Keyboard** on in the Accessibility settings, mouse clicks open it too, and Touch Board stands in for the GNOME keyboard.
 
 ## Preferences
 
-Open with `gnome-extensions prefs touch-board@d3z-the-dev.github.io` or from the Extensions app.
+Open them from the Extensions app or with `gnome-extensions prefs touch-board@d3z-the-dev.github.io`.
 
-- **Layout:** compact, standard, or full.
-- **Height:** percent of the shorter display edge, 18 to 60.
-- **Key spacing and Font size:** percent of the default.
-- **Key font:** glyph family. The default IBM Plex Sans chain falls back to system fonts for CJK, Arabic, Devanagari and other non-Latin scripts.
-- **Label case:** upper, title or lower. F1-F12 always keep their capital F.
-- **Key corners:** sharp, soft or round.
-- **Keyboard corners:** round or square the keyboard's top corners.
-- **Engaged colour:** fill for one-shot and locked modifiers.
-- **Modifier keys:** Hold, Latch, or Toggle. Fn follows the same mode.
-- **Accent popup:** long-press for accents, or auto-repeat instead.
-- **Key click:** synthesised click on each tap, with selectable sound and volume.
-- **Function row:** reassign any F1-F12 to volume, brightness, media, mic mute, navigation or editing keys.
+| Setting | What it does |
+|---|---|
+| Layout | Compact, Standard or Full |
+| Style | Modern (follows the light or dark scheme) or Classic (dark, shaded keys) |
+| Height | Percent of the shorter display edge, 18-60 |
+| Key spacing, Font size | Percent of the default (font size 75-135) |
+| Key font | Any installed family (the clear button goes back to IBM Plex Sans, or to the interface font without it) |
+| Label case | Upper, title or lower (F1-F12 keep their capital F) |
+| Key corners | Sharp, soft or round |
+| Keyboard corners | Round or square top corners |
+| System accent colour, Engaged colour | Modifier colour: the GNOME accent (blue on GNOME 46) or a custom colour |
+| Modifier keys | Hold, Latch or Toggle |
+| Accent popup | Long-press for accents, or auto-repeat |
+| Key click | One click per key press: thock, click or tap, with volume |
+| Function row | Remap any F1-F12 slot |
+
+> [!WARNING]
+> Coming from 0.1.5 or older, your settings may still hold the old grey engaged colour and an explicit IBM Plex Sans. Turn on **System accent colour** and press the font clear button to get the new defaults.
 
 ## Development
 
-`src/` runs as plain GJS with no build step. Linting is eslint.
+`src/` runs as plain GJS with no build step.
 
 ```sh
 git clone https://github.com/d3z-the-dev/touch-board
 cd touch-board
-npm install
-make lint    # eslint
-make pack    # build the zip in dist/
+npm install      # dev tools (eslint)
+make lint        # run eslint
+make pack        # build the zip in dist/
 ```
-
-CI runs the same checks on pushes to master and on pull requests, and attaches a built zip to each tagged release.
 
 ## Contributing
 
-Open a pull request or issue. State the scope upfront.
+Open an issue or a pull request and state the scope up front.
 
 ### Features
 
-**Missing functionality**: anything the stock OSK or comparable keyboards do that Touch Board does not. State what it is, where it exists, and why it belongs here.
-
-**New functionality**: anything that fits a full hardware keyboard on a touchscreen. Describe the use case.
-
-**New input types**: gesture typing, handwriting forwarded to IBus, stylus layout. Include a working prototype or a tight spec.
-
-**Innovative features**: experimental or high-effort ideas. Tag the issue `proposal`, describe the idea and use case fully, and link a proof-of-concept fork if you have one. Work begins only after a maintainer decision.
-
-**New layouts**: any xkb layout not in the shipped set. Format follows `src/lib/labels.js`. Include a verified glyph map and a reference source (keyboard photo or xkb file). A dynamic system that generates maps from the active xkb definition at runtime would replace the static table. We welcome that work.
+- **Missing functionality:** something the stock OSK or a comparable keyboard does and Touch Board does not. Say where it exists and why it belongs here.
+- **New functionality:** anything that fits a full hardware keyboard on a touchscreen. Describe the use case.
+- **New input types:** gesture typing, handwriting forwarded to IBus, a stylus layout. Bring a working prototype or a tight spec.
+- **Larger ideas:** experimental or high-effort features. Open the issue as a proposal with the full use case and, if you have one, a proof-of-concept fork. Work starts after a maintainer decision.
+- **New layouts:** any xkb layout not in the shipped set, in the format of `src/lib/labels.js`, with a verified glyph map and a reference (keyboard photo or xkb file). Building the maps from the active xkb layout at runtime is welcome too.
 
 ### Bugs
 
-Cover the full lifecycle: discovery, reproduction, fix, test. Missing any stage delays resolution.
+> [!IMPORTANT]
+> Include exact steps from a fresh GNOME session, expected and actual behaviour, GNOME Shell version, Wayland or X11, device model, screen resolution and scaling factor.
 
-Required: exact steps to reproduce from a fresh GNOME session, expected vs. actual behaviour, GNOME Shell version, Wayland or X11, device model, screen resolution and DPI scaling factor.
+- **CJK layouts** (`zh` `ja` `ko`): the keyboard only forwards keysyms and leaves composition to the IBus engine. Give the engine name, version and custom settings, and say whether the bug shows with and without an active engine.
+- **Display, scaling, rendering:** add the monitor count, whether it reproduces after a rotation or on a secondary display, and a screenshot or recording.
 
-**CJK layouts** (`zh` `ja` `ko`): the keyboard only forwards keysyms. Composition happens inside the IBus engine and its post-installation configuration. Include the engine name and version, any custom settings, and whether the bug appears with or without an active engine. With no engine installed, CJK falls back to US faces. That is expected.
-
-**Display, scaling, rendering**: include screen resolution, DPI scaling factor, monitor count, and whether the issue reproduces after a screen rotation or on a secondary display. Attach a screenshot or recording for visual artifacts.
-
-With a fix, document the full chain: how you found the bug, what you changed, and how you tested it. No reproduction case means no safe merge.
+> [!CAUTION]
+> Issues and pull requests that leave out the details above are closed without review. A bug report needs steps that reproduce it from a fresh session. A pull request also needs a passing `make lint` and a record of how it was tested: GNOME Shell versions, Wayland or X11, and what was checked on the device.
 
 ## License
 
 Touch Board ships under GPL-3.0-or-later. See [LICENSE](LICENSE) for the full text.
 
-The documentation images in `docs/img/` are licensed under
-[CC-BY-SA-4.0](LICENSES/CC-BY-SA-4.0.txt).
+The documentation images in `docs/img/` are licensed under [CC-BY-SA-4.0](LICENSES/CC-BY-SA-4.0.txt).

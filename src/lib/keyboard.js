@@ -11,7 +11,7 @@ import {Code, Kind} from './codes.js';
 import {profiles} from './geometry.js';
 import {glyphFor, supports, cjk} from './labels.js';
 import {accentsFor} from './accents.js';
-import {Key, Case, Corner, functionFor, mediaFor} from './settings.js';
+import {Key, Case, Corner, Look, Default, functionFor, mediaFor} from './settings.js';
 import {accentStyle} from './palette.js';
 import {percentScale, solveFontSize, innerWidth, rowMetrics, trayPadding} from './metrics.js';
 import {Row} from './row.js';
@@ -31,9 +31,11 @@ const Style = Object.freeze({
     SHARP: 'touch-board-sharp',
     ROUND: 'touch-board-round',
     FLAT: 'touch-board-flat',
+    LIGHT: 'touch-board-light',
+    CLASSIC: 'touch-board-classic',
 });
 
-const Pseudo = Object.freeze({ACTIVE: 'active'});
+const Pseudo = Object.freeze({PRESSED: 'pressed', LATCHED: 'latched', LOCKED: 'locked'});
 
 const Signal = Object.freeze({
     STATE_CHANGED: 'state-changed',
@@ -41,6 +43,7 @@ const Signal = Object.freeze({
     MAPPED: 'notify::mapped',
     DESTROY: 'destroy',
     DISMISS: 'dismiss',
+    SCHEME: 'notify::color-scheme',
 });
 
 const Hold = Object.freeze({DELAY: 360});
@@ -58,7 +61,7 @@ const Peripheral = Object.freeze({
     INTERVAL: 'repeat-interval',
 });
 
-const Family = Object.freeze({DEFAULT: 'IBM Plex Sans', UNSAFE: /[^\p{L}\p{N} ._-]/gu});
+const Family = Object.freeze({UNSAFE: /[^\p{L}\p{N} ._-]/gu});
 
 const Fallback = Object.freeze({LAYOUT: 'us'});
 
@@ -103,16 +106,19 @@ class Keyboard extends St.BoxLayout {
         this._rows = [];
         this._capsKey = null;
         this._overrides = {};
+        this._family = this.get_pango_context().get_font_map().get_family(Default.FAMILY) ? Default.FAMILY : '';
         const chooser = new Chooser({
             injector,
             track: (button, onDown, onUp) => this._track(button, onDown, onUp),
-            active: Pseudo.ACTIVE,
+            pressed: Pseudo.PRESSED,
+            look: () => [Style.CLASSIC, Style.LIGHT, Style.SHARP, Style.ROUND].filter(name => this.has_style_class_name(name)),
         });
         this._chooser = chooser;
         const fnLayer = new FnLayer({
             settings,
             track: (button, onDown, onUp) => this._track(button, onDown, onUp),
             tint: (button, locked) => this._tint(button, locked),
+            untint: button => this._untint(button),
             repaint: () => this._fnRepaint(),
         });
         this._fnLayer = fnLayer;
@@ -121,6 +127,7 @@ class Keyboard extends St.BoxLayout {
             injector,
             track: (button, onDown, onUp) => this._track(button, onDown, onUp),
             tint: (button, locked) => this._tint(button, locked),
+            untint: button => this._untint(button),
             close: () => chooser.close(),
             after: inject => chooser.after(inject),
             paint: () => this._paint(),
@@ -154,6 +161,8 @@ class Keyboard extends St.BoxLayout {
         this._connect(settings, `changed::${Key.GLYPH_SIZE}`, () => this._fit());
         this._connect(settings, `changed::${Key.CORNER}`, () => this._applyShape());
         this._connect(settings, `changed::${Key.ROUNDED}`, () => this._applyShape());
+        this._connect(settings, `changed::${Key.LOOK}`, () => this._applyLook());
+        this._connect(St.Settings.get(), Signal.SCHEME, () => this._applyLook());
         this._connect(settings, `changed::${Key.LAYOUT}`, () => this._rebuild());
         this._connect(this, Signal.SHOW, () => this._fit());
         this._connect(this, Signal.MAPPED, () => {
@@ -161,8 +170,8 @@ class Keyboard extends St.BoxLayout {
                 this._restyle();
         });
         this._applyLabels();
-        this._fit();
         this._applyShape();
+        this._applyLook();
         this._syncCaps();
         this._languageId = language.connect(() => this._relabel());
         this._relabel();
@@ -232,15 +241,24 @@ class Keyboard extends St.BoxLayout {
         if (!this.get_stage())
             return;
         const active = this._fnLayer.active();
-        for (const face of this._faces) {
-            if (face.fn)
-                this._fnScale(face.button, active, false);
-            const next = active && face.fn
-                ? this._fitFace(face.button, face.fn.face, face.fn.symbol, face.span)
-                : this._fitFace(face.button, face.word, face.symbol, face.span);
-            if (face.button.label !== next)
-                face.button.set_label(next);
-        }
+        for (const face of this._faces)
+            this._applyFace(face, active);
+    }
+
+    _applyFace(face, active) {
+        if (face.fn)
+            this._fnScale(face.button, active, false);
+        const next = active && face.fn
+            ? this._fitFace(face.button, face.fn.face, face.fn.symbol, face.span)
+            : this._fitFace(face.button, face.word, face.symbol, face.span);
+        if (face.button.label !== next)
+            face.button.set_label(next);
+    }
+
+    _refit(button) {
+        const face = this._faces.find(entry => entry.button === button);
+        if (face && this.get_stage())
+            this._applyFace(face, this._fnLayer.active());
     }
 
     _inner(span) {
@@ -269,7 +287,7 @@ class Keyboard extends St.BoxLayout {
 
     _fitFace(button, word, symbol, span) {
         const face = this._transform(word);
-        if (symbol === undefined)
+        if (symbol === undefined || !this.get_stage())
             return face;
         return this._fits(button, face, this._inner(span)) ? face : symbol;
     }
@@ -291,6 +309,7 @@ class Keyboard extends St.BoxLayout {
         this._applyStyle();
         this._applyMetrics();
         this._applyFaces();
+        this._applyFunctions();
         this._applyPads();
     }
 
@@ -304,6 +323,21 @@ class Keyboard extends St.BoxLayout {
         this._setClass(Style.SHARP, corner === Corner.SHARP);
         this._setClass(Style.ROUND, corner === Corner.ROUND);
         this._setClass(Style.FLAT, !settings.get_boolean(Key.ROUNDED));
+    }
+
+    _classic() {
+        return this._settings.get_string(Key.LOOK) === Look.CLASSIC;
+    }
+
+    _light() {
+        return !this._classic() && St.Settings.get().color_scheme === St.SystemColorScheme.PREFER_LIGHT;
+    }
+
+    _applyLook() {
+        this._setClass(Style.CLASSIC, this._classic());
+        this._setClass(Style.LIGHT, this._light());
+        this._applyColor();
+        this._fit();
     }
 
     _setClass(name, on) {
@@ -367,7 +401,7 @@ class Keyboard extends St.BoxLayout {
         } else if (spec.kind === Kind.FN) {
             this._tracked.push(this._fnLayer.wire(button));
         } else if (spec.fslot) {
-            const entry = {slot: spec.fslot, button, base: spec.code, label: spec.label, code: spec.code, override: false};
+            const entry = {slot: spec.fslot, button, base: spec.code, label: spec.label, code: spec.code, span: spec.span, override: false};
             this._fkeys.push(entry);
             this._tracked.push(this._track(button, () => modifiers.tap(this._functionCode(entry)), () => {}));
         } else if (spec.kind === Kind.KEY) {
@@ -389,14 +423,11 @@ class Keyboard extends St.BoxLayout {
             const assigned = this._assigned(entry.slot);
             entry.override = assigned !== undefined;
             entry.code = assigned ? assigned.code : entry.base;
-            let face;
-            if (assigned)
-                face = assigned.face;
-            else if (active)
-                face = mediaFor(entry.slot)?.face ?? entry.label;
-            else
-                face = entry.label;
-            face = this._transform(face);
+            const media = active ? mediaFor(entry.slot) : undefined;
+            const source = assigned ?? media;
+            const face = source
+                ? this._fitFace(entry.button, source.face, source.symbol, entry.span)
+                : this._transform(entry.label);
             if (entry.button.label !== face)
                 entry.button.set_label(face);
         }
@@ -415,7 +446,7 @@ class Keyboard extends St.BoxLayout {
     _fnFace(button, fn, span) {
         const assigned = fn.slot ? this._assigned(fn.slot) : undefined;
         return assigned
-            ? this._fitFace(button, assigned.face, undefined, span)
+            ? this._fitFace(button, assigned.face, assigned.symbol, span)
             : this._fitFace(button, fn.face, fn.symbol, span);
     }
 
@@ -428,7 +459,7 @@ class Keyboard extends St.BoxLayout {
     }
 
     _track(button, onDown, onUp, onMove, onCancel) {
-        return track(button, {onDown, onUp, onMove, onCancel, click: () => this._click(), active: Pseudo.ACTIVE});
+        return track(button, {onDown, onUp, onMove, onCancel, click: () => this._click(), pseudo: Pseudo.PRESSED});
     }
 
     _fnRepaint() {
@@ -579,7 +610,7 @@ class Keyboard extends St.BoxLayout {
         if (this._keymap.get_caps_lock_state())
             this._tint(caps, true);
         else
-            caps.set_style(null);
+            this._untint(caps);
     }
 
     _toggleNum() {
@@ -605,17 +636,17 @@ class Keyboard extends St.BoxLayout {
         if (!num)
             return;
         if (this._numeric)
-            num.set_style(null);
+            this._untint(num);
         else
             this._tint(num, true);
     }
 
     _applyStyle() {
-        const family = this._settings.get_string(Key.FONT).replace(Family.UNSAFE, '').trim();
+        const family = this._settings.get_string(Key.FONT).replace(Family.UNSAFE, '').trim() || this._family;
         const geom = this._fontSize;
         const size = Math.round(geom * this._glyphScale());
         const {side, bottom} = trayPadding(geom, this._tight);
-        const face = family && family !== Family.DEFAULT ? `font-family: "${family}"; ` : '';
+        const face = family ? `font-family: "${family}"; ` : '';
         this.set_style(`${face}font-size: ${size}px; padding: ${side}px ${side}px ${bottom}px ${side}px;`);
     }
 
@@ -664,7 +695,27 @@ class Keyboard extends St.BoxLayout {
     }
 
     _tint(button, locked) {
-        button.set_style(accentStyle(this._settings.get_string(Key.COLOR), locked));
+        const look = {light: this._light(), classic: this._classic()};
+        button.set_style(accentStyle(this._settings.get_string(Key.COLOR), locked, look));
+        if (locked) {
+            button.remove_style_pseudo_class(Pseudo.LATCHED);
+            button.add_style_pseudo_class(Pseudo.LOCKED);
+        } else {
+            button.remove_style_pseudo_class(Pseudo.LOCKED);
+            button.add_style_pseudo_class(Pseudo.LATCHED);
+        }
+        this._refit(button);
+    }
+
+    _untint(button) {
+        button.set_style(null);
+        button.remove_style_pseudo_class(Pseudo.LATCHED);
+        button.remove_style_pseudo_class(Pseudo.LOCKED);
+        this._refit(button);
+    }
+
+    owns(actor) {
+        return this._chooser.owns(actor);
     }
 
     _applyColor() {

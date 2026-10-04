@@ -6,7 +6,7 @@ const Signal = Object.freeze({
     TOUCH: 'touch-event',
 });
 
-export function track(button, {onDown, onUp, onMove, onCancel, click, active}) {
+export function track(button, {onDown, onUp, onMove, onCancel, click, pseudo}) {
     let slot = null;
     let pressed = false;
     let x = 0;
@@ -15,7 +15,7 @@ export function track(button, {onDown, onUp, onMove, onCancel, click, active}) {
         if (pressed)
             return;
         pressed = true;
-        button.add_style_pseudo_class(active);
+        button.add_style_pseudo_class(pseudo);
         onDown();
         click();
     };
@@ -23,14 +23,14 @@ export function track(button, {onDown, onUp, onMove, onCancel, click, active}) {
         if (!pressed)
             return;
         pressed = false;
-        button.remove_style_pseudo_class(active);
+        button.remove_style_pseudo_class(pseudo);
         onUp(x, y);
     };
     const drop = () => {
         if (!pressed)
             return;
         pressed = false;
-        button.remove_style_pseudo_class(active);
+        button.remove_style_pseudo_class(pseudo);
         if (onCancel)
             onCancel();
     };

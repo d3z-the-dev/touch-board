@@ -7,17 +7,23 @@ import Pango from 'gi://Pango';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-import {Key, Case, Corner, Layout, Mode, Click, Slots, Functions} from './lib/settings.js';
+import {Key, Default, Look, Case, Corner, Layout, Mode, Click, Slots, Functions} from './lib/settings.js';
+import {hex} from './lib/palette.js';
 
 const Label = Object.freeze({
     PAGE: 'Touch Board',
     APPEARANCE: 'Appearance',
     LAYOUT_ROW: 'Layout',
     LAYOUT_SUBTITLE: 'Which key block to show',
+    LOOK_ROW: 'Style',
+    LOOK_SUBTITLE: 'Overall look of the keyboard',
     FONT_ROW: 'Key font',
     FONT_SUBTITLE: 'Typeface for the key glyphs',
+    FONT_RESET: 'Use the default font',
+    ACCENT_ROW: 'System accent colour',
+    ACCENT_SUBTITLE: 'Engaged modifiers use the GNOME accent',
     COLOR_ROW: 'Engaged colour',
-    COLOR_SUBTITLE: 'Colour of an engaged modifier',
+    COLOR_SUBTITLE: 'Custom colour of an engaged modifier',
     CASE_ROW: 'Label case',
     CASE_SUBTITLE: 'Letter case of the key labels',
     CORNER_ROW: 'Key corners',
@@ -48,6 +54,11 @@ const Label = Object.freeze({
     DEFAULT: 'Default',
 });
 
+const Looks = Object.freeze([
+    {id: Look.MODERN, name: 'Modern'},
+    {id: Look.CLASSIC, name: 'Classic'},
+]);
+
 const Cases = Object.freeze([
     {id: Case.LOWER, name: 'lowercase'},
     {id: Case.TITLE, name: 'Titlecase'},
@@ -76,10 +87,11 @@ const Clicks = Object.freeze([
     {id: Click.THOCK, name: 'Thock'},
     {id: Click.CLICK, name: 'Click'},
     {id: Click.TAP, name: 'Tap'},
-    {id: Click.POP, name: 'Pop'},
 ]);
 
-const Icon = Object.freeze({PAGE: 'preferences-desktop-keyboard-symbolic'});
+const Icon = Object.freeze({PAGE: 'preferences-desktop-keyboard-symbolic', RESET: 'edit-clear-symbolic'});
+
+const Accent = Object.freeze({SINCE: 6});
 
 const Property = Object.freeze({
     ACTIVE: 'active',
@@ -93,6 +105,8 @@ const Signal = Object.freeze({
     SELECTED: 'notify::selected',
     FONT: 'notify::font-desc',
     RGBA: 'notify::rgba',
+    ACTIVE: 'notify::active',
+    CLICKED: 'clicked',
 });
 
 export default class TouchBoardPreferences extends ExtensionPreferences {
@@ -116,6 +130,7 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
     _appearance(settings, watch) {
         const group = new Adw.PreferencesGroup({title: Label.APPEARANCE});
         group.add(this._combo(settings, watch, Key.LAYOUT, Label.LAYOUT_ROW, Label.LAYOUT_SUBTITLE, Layouts));
+        group.add(this._combo(settings, watch, Key.LOOK, Label.LOOK_ROW, Label.LOOK_SUBTITLE, Looks));
         group.add(this._spin(settings, Key.HEIGHT, Label.HEIGHT_ROW, Label.HEIGHT_SUBTITLE, 1, 5));
         group.add(this._spin(settings, Key.SPACING, Label.SPACING_ROW, Label.SPACING_SUBTITLE, 1, 5));
         group.add(this._spin(settings, Key.GLYPH_SIZE, Label.GLYPH_ROW, Label.GLYPH_SUBTITLE, 1, 5));
@@ -123,7 +138,7 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
         group.add(this._combo(settings, watch, Key.CASE, Label.CASE_ROW, Label.CASE_SUBTITLE, Cases));
         group.add(this._combo(settings, watch, Key.CORNER, Label.CORNER_ROW, Label.CORNER_SUBTITLE, Corners));
         group.add(this._switch(settings, Key.ROUNDED, Label.ROUNDED_ROW, Label.ROUNDED_SUBTITLE));
-        group.add(this._color(settings, watch));
+        this._color(settings, watch).forEach(row => group.add(row));
         return group;
     }
 
@@ -134,19 +149,34 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
             valign: Gtk.Align.CENTER,
         });
 
+        const reset = new Gtk.Button({
+            icon_name: Icon.RESET,
+            tooltip_text: Label.FONT_RESET,
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+        const fallback = button.get_pango_context().get_font_map().get_family(Default.FAMILY)
+            ? Default.FAMILY
+            : Pango.FontDescription.from_string(Gtk.Settings.get_default().gtk_font_name).get_family();
+        let shown = '';
+
         watch(Key.FONT, () => {
             const family = settings.get_string(Key.FONT);
-            if (!family)
-                return;
+            reset.sensitive = family !== '';
+            shown = family || fallback;
             const desc = new Pango.FontDescription();
-            desc.set_family(family);
+            desc.set_family(shown);
             button.set_font_desc(desc);
         });
         button.connect(Signal.FONT, () => {
-            settings.set_string(Key.FONT, button.get_font_desc().get_family());
+            const family = button.get_font_desc().get_family();
+            if (family !== shown)
+                settings.set_string(Key.FONT, family);
         });
+        reset.connect(Signal.CLICKED, () => settings.set_string(Key.FONT, ''));
 
         const row = new Adw.ActionRow({title: Label.FONT_ROW, subtitle: Label.FONT_SUBTITLE});
+        row.add_suffix(reset);
         row.add_suffix(button);
         row.activatable_widget = button;
         return row;
@@ -209,23 +239,48 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
             valign: Gtk.Align.CENTER,
         });
 
-        watch(Key.COLOR, () => {
-            const rgba = new Gdk.RGBA();
-            if (rgba.parse(settings.get_string(Key.COLOR)))
-                button.set_rgba(rgba);
-        });
-        button.connect(Signal.RGBA, () => {
-            const colour = button.get_rgba();
-            const hex = [colour.red, colour.green, colour.blue]
-                .map(channel => Math.round(channel * 255).toString(16).padStart(2, '0'))
-                .join('');
-            settings.set_string(Key.COLOR, `#${hex}`);
-        });
-
+        const system = new Adw.SwitchRow({title: Label.ACCENT_ROW, subtitle: Label.ACCENT_SUBTITLE});
         const row = new Adw.ActionRow({title: Label.COLOR_ROW, subtitle: Label.COLOR_SUBTITLE});
         row.add_suffix(button);
         row.activatable_widget = button;
-        return row;
+
+        button.set_rgba(this._accent());
+        const picked = () => {
+            const colour = button.get_rgba();
+            return `#${[colour.red, colour.green, colour.blue]
+                .map(channel => Math.round(channel * 255).toString(16).padStart(2, '0'))
+                .join('')}`;
+        };
+        const store = value => {
+            if (value !== (hex(settings.get_string(Key.COLOR)) ?? ''))
+                settings.set_string(Key.COLOR, value);
+        };
+
+        watch(Key.COLOR, () => {
+            const custom = hex(settings.get_string(Key.COLOR));
+            if (custom) {
+                const rgba = new Gdk.RGBA();
+                rgba.parse(custom);
+                button.set_rgba(rgba);
+            }
+            system.active = !custom;
+            row.sensitive = Boolean(custom);
+        });
+        button.connect(Signal.RGBA, () => {
+            if (!system.active)
+                store(picked());
+        });
+        system.connect(Signal.ACTIVE, () => store(system.active ? '' : picked()));
+
+        return [system, row];
+    }
+
+    _accent() {
+        if (Adw.MINOR_VERSION >= Accent.SINCE)
+            return Adw.StyleManager.get_default().get_accent_color_rgba();
+        const rgba = new Gdk.RGBA();
+        rgba.parse(Default.ACCENT);
+        return rgba;
     }
 
     _functionRow(settings, watch) {

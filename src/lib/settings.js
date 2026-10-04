@@ -10,6 +10,7 @@ export const Key = Object.freeze({
     HEIGHT: 'height',
     SPACING: 'spacing',
     GLYPH_SIZE: 'glyph-size',
+    LOOK: 'style',
     LAYOUT: 'layout',
     MODE: 'modifier-mode',
     ACCENTS: 'accents',
@@ -18,13 +19,17 @@ export const Key = Object.freeze({
     VOLUME: 'click-volume',
 });
 
-export const Default = Object.freeze({COLOR: '#8a8a8e'});
+export const Default = Object.freeze({FAMILY: 'IBM Plex Sans', ACCENT: '#3584e4'});
+
+export const Look = Object.freeze({
+    MODERN: 'modern',
+    CLASSIC: 'classic',
+});
 
 export const Click = Object.freeze({
     THOCK: 'thock',
     CLICK: 'click',
     TAP: 'tap',
-    POP: 'pop',
 });
 
 export const Case = Object.freeze({
@@ -67,22 +72,22 @@ export const Slots = Object.freeze([
 ]);
 
 export const Functions = Object.freeze([
-    {id: 'volume-up', name: 'Volume up', face: 'Vol+', code: Code.VOLUMEUP},
-    {id: 'volume-down', name: 'Volume down', face: 'Vol−', code: Code.VOLUMEDOWN},
-    {id: 'mute', name: 'Mute', face: 'Mute', code: Code.MUTE},
-    {id: 'play-pause', name: 'Play / Pause', face: 'Play', code: Code.PLAYPAUSE},
-    {id: 'next', name: 'Next track', face: 'Next', code: Code.NEXTSONG},
-    {id: 'previous', name: 'Previous track', face: 'Prev', code: Code.PREVIOUSSONG},
-    {id: 'brightness-up', name: 'Brightness up', face: 'Bri+', code: Code.BRIGHTNESSUP},
-    {id: 'brightness-down', name: 'Brightness down', face: 'Bri−', code: Code.BRIGHTNESSDOWN},
+    {id: 'volume-up', name: 'Volume up', face: 'Vol+', symbol: '♪+', code: Code.VOLUMEUP},
+    {id: 'volume-down', name: 'Volume down', face: 'Vol−', symbol: '♪−', code: Code.VOLUMEDOWN},
+    {id: 'mute', name: 'Mute', face: 'Mute', symbol: '⊗', code: Code.MUTE},
+    {id: 'play-pause', name: 'Play / Pause', face: 'Play', symbol: '▶', code: Code.PLAYPAUSE},
+    {id: 'next', name: 'Next track', face: 'Next', symbol: '▶▶', code: Code.NEXTSONG},
+    {id: 'previous', name: 'Previous track', face: 'Prev', symbol: '◀◀', code: Code.PREVIOUSSONG},
+    {id: 'brightness-up', name: 'Brightness up', face: 'Bri+', symbol: '☼+', code: Code.BRIGHTNESSUP},
+    {id: 'brightness-down', name: 'Brightness down', face: 'Bri−', symbol: '☼−', code: Code.BRIGHTNESSDOWN},
     {id: 'mic-mute', name: 'Microphone mute', face: 'Mic', code: Code.MICMUTE},
-    {id: 'home', name: 'Home', face: 'Home', code: Code.HOME},
-    {id: 'end', name: 'End', face: 'End', code: Code.END},
-    {id: 'page-up', name: 'Page up', face: 'pgup', code: Code.PAGEUP},
-    {id: 'page-down', name: 'Page down', face: 'pgdn', code: Code.PAGEDOWN},
-    {id: 'insert', name: 'Insert', face: 'Ins', code: Code.INSERT},
-    {id: 'delete', name: 'Delete', face: 'Del', code: Code.DELETE},
-    {id: 'print', name: 'Print screen', face: 'PrtSc', code: Code.PRINT},
+    {id: 'home', name: 'Home', face: 'Home', symbol: '⇱', code: Code.HOME},
+    {id: 'end', name: 'End', face: 'End', symbol: '⇲', code: Code.END},
+    {id: 'page-up', name: 'Page up', face: 'pgup', symbol: '⇞', code: Code.PAGEUP},
+    {id: 'page-down', name: 'Page down', face: 'pgdn', symbol: '⇟', code: Code.PAGEDOWN},
+    {id: 'insert', name: 'Insert', face: 'Ins', symbol: '⎀', code: Code.INSERT},
+    {id: 'delete', name: 'Delete', face: 'Del', symbol: '⌦', code: Code.DELETE},
+    {id: 'print', name: 'Print screen', face: 'PrtSc', symbol: 'PrS', code: Code.PRINT},
 ]);
 
 export function functionFor(id) {
@@ -90,18 +95,18 @@ export function functionFor(id) {
 }
 
 export const Media = Object.freeze([
-    {slot: 'f1', face: 'Bri−', code: Code.BRIGHTNESSDOWN},
-    {slot: 'f2', face: 'Bri+', code: Code.BRIGHTNESSUP},
-    {slot: 'f3', face: 'Mctl', code: Code.SCALE},
-    {slot: 'f4', face: 'Srch', code: Code.SEARCH},
-    {slot: 'f5', face: 'Kbd−', code: Code.KBDILLUMDOWN},
-    {slot: 'f6', face: 'Kbd+', code: Code.KBDILLUMUP},
-    {slot: 'f7', face: 'Prev', code: Code.PREVIOUSSONG},
-    {slot: 'f8', face: 'Play', code: Code.PLAYPAUSE},
-    {slot: 'f9', face: 'Next', code: Code.NEXTSONG},
-    {slot: 'f10', face: 'Mute', code: Code.MUTE},
-    {slot: 'f11', face: 'Vol−', code: Code.VOLUMEDOWN},
-    {slot: 'f12', face: 'Vol+', code: Code.VOLUMEUP},
+    {slot: 'f1', face: 'Bri−', symbol: '☼−', code: Code.BRIGHTNESSDOWN},
+    {slot: 'f2', face: 'Bri+', symbol: '☼+', code: Code.BRIGHTNESSUP},
+    {slot: 'f3', face: 'Mctl', symbol: '■', code: Code.SCALE},
+    {slot: 'f4', face: 'Srch', symbol: '◯', code: Code.SEARCH},
+    {slot: 'f5', face: 'Kbd−', symbol: 'Kb−', code: Code.KBDILLUMDOWN},
+    {slot: 'f6', face: 'Kbd+', symbol: 'Kb+', code: Code.KBDILLUMUP},
+    {slot: 'f7', face: 'Prev', symbol: '◀◀', code: Code.PREVIOUSSONG},
+    {slot: 'f8', face: 'Play', symbol: '▶', code: Code.PLAYPAUSE},
+    {slot: 'f9', face: 'Next', symbol: '▶▶', code: Code.NEXTSONG},
+    {slot: 'f10', face: 'Mute', symbol: '⊗', code: Code.MUTE},
+    {slot: 'f11', face: 'Vol−', symbol: '♪−', code: Code.VOLUMEDOWN},
+    {slot: 'f12', face: 'Vol+', symbol: '♪+', code: Code.VOLUMEUP},
 ]);
 
 export function mediaFor(slot) {

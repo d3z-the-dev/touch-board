@@ -1,40 +1,24 @@
 .touch-board {
-    background-color: rgb(14, 14, 16);
+    background-color: #1d1d20;
     border-radius: 20px 20px 0 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    font-family: "IBM Plex Sans", "IBM Plex Sans Devanagari", "IBM Plex Sans JP", "IBM Plex Sans KR", "IBM Plex Sans SC", "IBM Plex Sans TC", "IBM Plex Sans Thai", "IBM Plex Sans Arabic", "IBM Plex Sans Hebrew", "Noto Sans", "Cantarell", sans-serif;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
 }
 
 .touch-board-key {
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background-gradient-direction: vertical;
-    background-gradient-start: rgba(65, 65, 69, 1);
-    background-gradient-end: rgba(49, 49, 53, 1);
-    color: #f5f5f7;
-    font-weight: 500;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-    transition-duration: 90ms;
-}
-
-.touch-board-key:hover {
-    background-gradient-start: rgba(79, 79, 83, 1);
-    background-gradient-end: rgba(61, 61, 65, 1);
-}
-
-.touch-board-key:active {
-    background-gradient-start: rgba(91, 91, 95, 1);
-    background-gradient-end: rgba(75, 75, 79, 1);
-    box-shadow: 0 0 1px rgba(0, 0, 0, 0.4);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background-color: #3a3a3e;
+    color: #ffffff;
+    font-weight: 400;
+    transition-duration: 80ms;
 }
 
 .touch-board-sharp .touch-board-key {
-    border-radius: 2px;
+    border-radius: 4px;
 }
 
 .touch-board-round .touch-board-key {
-    border-radius: 12px;
+    border-radius: 16px;
 }
 
 .touch-board-flat {
@@ -42,18 +26,30 @@
 }
 
 .touch-board-function {
-    background-gradient-start: rgba(41, 41, 45, 1);
-    background-gradient-end: rgba(31, 31, 35, 1);
+    background-color: #2a2a2e;
 }
 
-.touch-board-function:hover {
-    background-gradient-start: rgba(53, 53, 57, 1);
-    background-gradient-end: rgba(41, 41, 45, 1);
+.touch-board-key:pressed {
+    background-color: #4a4a4d;
 }
 
-.touch-board-function:active {
-    background-gradient-start: rgba(79, 79, 83, 1);
-    background-gradient-end: rgba(63, 63, 67, 1);
+.touch-board-function:pressed {
+    background-color: #3d3d40;
+}
+
+.touch-board-key:latched {
+    border-color: #3584e4;
+    border-color: -st-accent-color;
+    color: #8fbbf0;
+    color: st-lighten(-st-accent-color, 20%);
+    font-weight: 600;
+}
+
+.touch-board-key:locked {
+    background-color: #3584e4;
+    background-color: -st-accent-color;
+    color: #ffffff;
+    font-weight: 600;
 }
 
 .touch-board-glyph {
@@ -64,21 +60,21 @@
 .touch-board-compact {
     font-size: 0.77em;
     font-weight: 600;
-    color: rgba(245, 245, 247, 0.82);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .touch-board-modifier {
     font-size: 0.82em;
     font-weight: 500;
-    color: rgba(245, 245, 247, 0.88);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .touch-board-popup {
-    background-color: rgb(14, 14, 16);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 0.7em;
-    padding: 0.35em;
-    box-shadow: 0 0.4em 1.1em rgba(0, 0, 0, 0.55);
+    background-color: #2a2a2e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 0.4em;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
 }
 
 .touch-board-popup-key {
@@ -86,23 +82,200 @@
     min-width: 2em;
     min-height: 2.2em;
     padding: 0 0.4em;
+    border-radius: 10px;
+    background-color: #3a3a3e;
+    color: #ffffff;
+    font-size: 1.2em;
+    font-weight: 400;
+    transition-duration: 80ms;
+}
+
+.touch-board-popup-key:pressed {
+    background-color: #4a4a4d;
+}
+
+.touch-board-popup.touch-board-sharp {
+    border-radius: 8px;
+}
+
+.touch-board-popup.touch-board-round {
+    border-radius: 20px;
+}
+
+.touch-board-sharp .touch-board-popup-key {
+    border-radius: 4px;
+}
+
+.touch-board-round .touch-board-popup-key {
+    border-radius: 16px;
+}
+
+.touch-board-light {
+    background-color: #e2e2e5;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+}
+
+.touch-board-light .touch-board-key {
+    background-color: #ffffff;
+    color: #222226;
+}
+
+.touch-board-light .touch-board-function {
+    background-color: #d0d0d5;
+}
+
+.touch-board-light .touch-board-key:pressed {
+    background-color: #c9c9cd;
+}
+
+.touch-board-light .touch-board-function:pressed {
+    background-color: #b9b9be;
+}
+
+.touch-board-light .touch-board-compact {
+    color: rgba(34, 34, 38, 0.8);
+}
+
+.touch-board-light .touch-board-modifier {
+    color: rgba(34, 34, 38, 0.9);
+}
+
+.touch-board-light .touch-board-key:latched {
+    border-color: #3584e4;
+    border-color: -st-accent-color;
+    color: #1b6acb;
+    color: st-darken(-st-accent-color, 10%);
+}
+
+.touch-board-light .touch-board-key:locked {
+    background-color: #3584e4;
+    background-color: -st-accent-color;
+    color: #ffffff;
+}
+
+.touch-board-popup.touch-board-light {
+    background-color: #f0f0f2;
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.touch-board-light .touch-board-popup-key {
+    background-color: #ffffff;
+    color: #222226;
+}
+
+.touch-board-light .touch-board-popup-key:pressed {
+    background-color: #c9c9cd;
+}
+
+.touch-board-classic {
+    background-color: #0e0e10;
+    box-shadow: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.touch-board-classic .touch-board-key {
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     background-gradient-direction: vertical;
-    background-gradient-start: rgba(65, 65, 69, 1);
-    background-gradient-end: rgba(49, 49, 53, 1);
+    background-gradient-start: #4a4a4f;
+    background-gradient-end: #3d3d42;
     color: #f5f5f7;
-    font-size: 1.2em;
     font-weight: 500;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-    transition-duration: 90ms;
 }
 
-.touch-board-popup-key:hover,
-.touch-board-popup-key:active {
-    background-gradient-start: rgba(79, 79, 83, 1);
-    background-gradient-end: rgba(63, 63, 67, 1);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+.touch-board-classic.touch-board-sharp .touch-board-key {
+    border-radius: 2px;
+}
+
+.touch-board-classic.touch-board-round .touch-board-key {
+    border-radius: 12px;
+}
+
+.touch-board-classic .touch-board-function {
+    background-gradient-start: #26262a;
+    background-gradient-end: #1d1d21;
+}
+
+.touch-board-classic .touch-board-key:pressed {
+    background-gradient-start: #68686e;
+    background-gradient-end: #58585d;
+}
+
+.touch-board-classic .touch-board-function:pressed {
+    background-gradient-start: #56565c;
+    background-gradient-end: #47474c;
+}
+
+.touch-board-classic .touch-board-key:latched,
+.touch-board-classic .touch-board-key:locked {
+    background-gradient-direction: none;
+    background-color: #3584e4;
+    background-color: -st-accent-color;
     color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.touch-board-classic .touch-board-key:locked {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+.touch-board-classic .touch-board-glyph {
+    font-weight: 400;
+}
+
+.touch-board-classic .touch-board-compact {
+    font-weight: 600;
+    color: rgba(245, 245, 247, 0.82);
+}
+
+.touch-board-classic .touch-board-modifier {
+    color: rgba(245, 245, 247, 0.88);
+}
+
+.touch-board-popup.touch-board-classic {
+    background-color: #0e0e10;
+    border-color: rgba(255, 255, 255, 0.05);
+    border-radius: 0.7em;
+    box-shadow: 0 0.4em 1.1em rgba(0, 0, 0, 0.55);
+}
+
+.touch-board-classic .touch-board-popup-key {
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background-gradient-direction: vertical;
+    background-gradient-start: #4a4a4f;
+    background-gradient-end: #3d3d42;
+    color: #f5f5f7;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.touch-board-classic .touch-board-popup-key:pressed {
+    background-gradient-start: #68686e;
+    background-gradient-end: #58585d;
+}
+
+.touch-board-classic.touch-board-sharp .touch-board-popup-key {
+    border-radius: 2px;
+}
+
+.touch-board-classic.touch-board-round .touch-board-popup-key {
+    border-radius: 12px;
+}
+
+.touch-board-key:locked:pressed,
+.touch-board-classic .touch-board-key:latched:pressed {
+    border-width: 0;
+    padding: 2px;
+    box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.15);
+}
+
+.touch-board-classic .touch-board-key:locked:pressed,
+.touch-board-classic .touch-board-key:latched:pressed {
+    padding: 1px;
 }

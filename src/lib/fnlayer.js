@@ -9,10 +9,11 @@ const Double = Object.freeze({DELAY: 320});
 const State = Object.freeze({OFF: 0, SHOT: 1, LOCK: 2});
 
 export class FnLayer {
-    constructor({settings, track, tint, repaint}) {
+    constructor({settings, track, tint, untint, repaint}) {
         this._settings = settings;
         this._track = track;
         this._tint = tint;
+        this._untint = untint;
         this._repaint = repaint;
         this._fn = State.OFF;
         this._key = null;
@@ -83,7 +84,7 @@ export class FnLayer {
         const key = this._key;
         if (key) {
             if (state === State.OFF)
-                key.set_style(null);
+                this._untint(key);
             else
                 this._tint(key, state === State.LOCK);
         }

@@ -8,11 +8,12 @@ const Hold = Object.freeze({DELAY: 360});
 const Double = Object.freeze({DELAY: 320});
 
 export class Modifiers {
-    constructor({settings, injector, track, tint, close, after, paint, fnShot, clearFn}) {
+    constructor({settings, injector, track, tint, untint, close, after, paint, fnShot, clearFn}) {
         this._settings = settings;
         this._injector = injector;
         this._track = track;
         this._tint = tint;
+        this._untint = untint;
         this._close = close;
         this._after = after;
         this._paint = paint;
@@ -71,7 +72,7 @@ export class Modifiers {
         const state = this._latched.get(code);
         if (!state)
             return;
-        state.button.set_style(null);
+        this._untint(state.button);
         this._latched.delete(code);
     }
 
@@ -122,7 +123,7 @@ export class Modifiers {
 
     clearAll() {
         for (const state of this._latched.values())
-            state.button.set_style(null);
+            this._untint(state.button);
         this._latched.clear();
     }
 

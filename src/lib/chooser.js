@@ -26,10 +26,11 @@ function within(actor, x, y) {
 }
 
 export class Chooser {
-    constructor({injector, track, active}) {
+    constructor({injector, track, pressed, look}) {
         this._injector = injector;
         this._track = track;
-        this._active = active;
+        this._pressed = pressed;
+        this._look = look;
         this._popup = null;
         this._owner = null;
         this._choices = [];
@@ -42,7 +43,7 @@ export class Chooser {
     open(button, accents) {
         this.close();
         this._owner = button;
-        const popup = new St.BoxLayout({style_class: Style.POPUP, reactive: true});
+        const popup = new St.BoxLayout({style_class: [Style.POPUP, ...this._look()].join(' '), reactive: true});
         Main.layoutManager.uiGroup.add_child(popup);
         this._popup = popup;
         for (const accent of accents) {
@@ -51,7 +52,7 @@ export class Chooser {
             this._choices.push({button: choice, accent});
             popup.add_child(choice);
         }
-        button.remove_style_pseudo_class(this._active);
+        button.remove_style_pseudo_class(this._pressed);
 
         const [x, y] = button.get_transformed_position();
         const monitor = Main.layoutManager.findMonitorForActor(button);
@@ -84,9 +85,9 @@ export class Chooser {
         const target = this._choiceAt(x, y);
         for (const entry of this._choices) {
             if (entry === target)
-                entry.button.add_style_pseudo_class(this._active);
+                entry.button.add_style_pseudo_class(this._pressed);
             else
-                entry.button.remove_style_pseudo_class(this._active);
+                entry.button.remove_style_pseudo_class(this._pressed);
         }
     }
 
@@ -149,6 +150,10 @@ export class Chooser {
             Main.inputMethod.commit(accent.label);
         else
             this._injector.keysym(accent.keyval);
+    }
+
+    owns(actor) {
+        return this._popup !== null && this._popup.contains(actor);
     }
 
     _withinPopup(x, y) {
