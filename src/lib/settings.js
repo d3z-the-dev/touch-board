@@ -12,6 +12,7 @@ export const Key = Object.freeze({
     GLYPH_SIZE: 'glyph-size',
     LOOK: 'style',
     LAYOUT: 'layout',
+    SPLIT: 'split',
     MODE: 'modifier-mode',
     ACCENTS: 'accents',
     CLICK: 'click-enabled',

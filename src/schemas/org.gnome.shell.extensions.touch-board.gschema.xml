@@ -55,6 +55,11 @@
       <summary>Keyboard profile</summary>
       <description>Which key block to draw: a 60% compact block, the default 75% block with the function row, navigation column and arrow cluster, or a 100% full block that adds the numpad.</description>
     </key>
+    <key name="split" type="b">
+      <default>false</default>
+      <summary>Split layout</summary>
+      <description>Whether the keys are drawn as two halves at the screen edges with an empty gap between them, for typing with both thumbs. A long press on the Hide key switches it from the keyboard.</description>
+    </key>
     <key name="height" type="i">
       <default>35</default>
       <range min="18" max="60"/>

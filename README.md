@@ -5,7 +5,7 @@
 **The real on-screen keyboard for GNOME Shell.**<br>
 _all **keys**, any **layout**, raw **input**_
 
-**`layout profiles`** **`display scaling`** **`smart visibility`** **`evdev injection`** **`xkb tracking`** **`accent popups`** **`modifier modes`** **`fn layer`**
+**`layout profiles`** **`split layout`** **`display scaling`** **`smart visibility`** **`evdev injection`** **`xkb tracking`** **`accent popups`** **`modifier modes`** **`fn layer`**
 
 [![CI](https://github.com/d3z-the-dev/touch-board/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/d3z-the-dev/touch-board/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/d3z-the-dev/touch-board?label=release&color=2EA44F)](https://github.com/d3z-the-dev/touch-board/releases/latest)
@@ -23,7 +23,7 @@ _all **keys**, any **layout**, raw **input**_
 
 - **Every key a hardware keyboard has.** Modifiers, function row, navigation, arrows and a numpad, sized for fingers.
 - **Hardware-level input.** Keys inject raw evdev codes through a Clutter virtual device, and the active xkb layout translates them, so shortcuts and terminal apps behave as with a real keyboard.
-- **Three profiles.** Compact (60%), Standard (75%) and Full (100%) fill the display width.
+- **Three profiles, split or joined.** Compact (60%), Standard (75%) and Full (100%) fill the display width. Any of them splits into two halves for thumb typing.
 - **Modifier modes.** Shift, Ctrl, Alt, Super, AltGr and Fn work as Hold, Latch or Toggle.
 - **Fn layer and remappable F-row.** Fn brings back what compact drops and turns the F-row into media keys. Each F-key can be remapped.
 - **Live layouts.** Faces follow the active input source: 11 bundled glyph maps, CJK through IBus engines.
@@ -57,6 +57,23 @@ Adds the function row, a navigation column (PgUp, PgDn, Home, End) and an arrow 
 
 Standard plus an Ins/Home/PgUp over Del/End/PgDn block, PrtSc, ScrollLock and Pause with a media trio across the top, and a numpad with digit and navigation faces.
 </details>
+
+<details>
+<summary><b>Split</b>: two halves at the screen edges, for thumb typing</summary>
+
+<img src="docs/img/standard-split.svg" alt="Touch Board, standard profile, split" width="100%">
+
+Standard and Full (75% / 100%). The left half ends at 6, T, G and B, and Space becomes one key per half. Full splits into the standard rows, without the numpad, Ins, ScrollLock, Pause, the media trio and the right Super.
+
+<img src="docs/img/compact-split.svg" alt="Touch Board, compact profile, split" width="100%">
+
+Compact (60%). Fewer columns per half, so each key is bigger.
+
+In portrait the halves move closer together, so the keys stay big enough to hit.
+</details>
+
+> [!TIP]
+> Hold the Hide key until it lights up, then lift to switch between split and joined. A quick tap still hides the keyboard, and sliding off the key before you lift cancels both. The **Split keyboard** switch in Preferences does the same.
 
 ## Styles
 
@@ -210,6 +227,7 @@ Open them from the Extensions app or with `gnome-extensions prefs touch-board@d3
 | Setting | What it does |
 |---|---|
 | Layout | Compact, Standard or Full |
+| Split keyboard | Two halves at the screen edges (holding Hide switches it too) |
 | Style | Modern (follows the light or dark scheme) or Classic (dark, shaded keys) |
 | Height | Percent of the shorter display edge, 18-60 |
 | Key spacing, Font size | Percent of the default (font size 75-135) |

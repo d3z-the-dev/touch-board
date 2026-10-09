@@ -11,16 +11,25 @@ class Row extends St.Widget {
         this._total = total;
         this._height = 0;
         this._gap = 0;
+        this._unit = 0;
+        this._cut = -1;
+        this._tail = 0;
         this._spans = [];
         this._rowspans = [];
     }
 
-    setMetrics(height, gap) {
-        if (height === this._height && gap === this._gap)
+    setMetrics(height, gap, unit) {
+        if (height === this._height && gap === this._gap && unit === this._unit)
             return;
         this._height = height;
         this._gap = gap;
+        this._unit = unit;
         this.queue_relayout();
+    }
+
+    setCut(index) {
+        this._cut = index;
+        this._tail = this._spans.slice(index).reduce((sum, span) => sum + span, 0);
     }
 
     append(actor, span, rows = 1) {
@@ -52,10 +61,12 @@ class Row extends St.Widget {
         this.set_allocation(box);
         const width = box.x2 - box.x1;
         const height = box.y2 - box.y1;
-        const unit = width / total;
+        const unit = this._unit || width / total;
         const children = this.get_children();
         let offset = 0;
         for (let index = 0; index < children.length; index++) {
+            if (index === this._cut)
+                offset = width - this._tail * unit;
             const next = offset + unit * spans[index];
             const x1 = Math.round(offset) + gap;
             const x2 = Math.round(next) - gap;

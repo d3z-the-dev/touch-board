@@ -20,7 +20,7 @@ const Replace = Object.freeze({
     GUARD_MS: 60,
 });
 
-function within(actor, x, y) {
+export function within(actor, x, y) {
     const [left, top] = actor.get_transformed_position();
     return x >= left && x <= left + actor.width && y >= top && y <= top + actor.height;
 }

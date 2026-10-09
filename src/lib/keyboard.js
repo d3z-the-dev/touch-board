@@ -8,15 +8,15 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {Code, Kind} from './codes.js';
-import {profiles} from './geometry.js';
+import {rowsFor, halves, widest} from './geometry.js';
 import {glyphFor, supports, cjk} from './labels.js';
 import {accentsFor} from './accents.js';
 import {Key, Case, Corner, Look, Default, functionFor, mediaFor} from './settings.js';
 import {accentStyle} from './palette.js';
-import {percentScale, solveFontSize, innerWidth, rowMetrics, trayPadding} from './metrics.js';
+import {percentScale, solveFontSize, unitWidth, innerWidth, rowMetrics, trayPadding} from './metrics.js';
 import {Row} from './row.js';
 import {track} from './tracker.js';
-import {Chooser} from './chooser.js';
+import {Chooser, within} from './chooser.js';
 import {Composer} from './composer.js';
 import {Modifiers} from './modifiers.js';
 import {FnLayer} from './fnlayer.js';
@@ -103,6 +103,8 @@ class Keyboard extends St.BoxLayout {
         this._fontSize = 0;
         this._tight = false;
         this._total = 0;
+        this._widest = 0;
+        this._unit = 0;
         this._rows = [];
         this._capsKey = null;
         this._overrides = {};
@@ -164,6 +166,7 @@ class Keyboard extends St.BoxLayout {
         this._connect(settings, `changed::${Key.LOOK}`, () => this._applyLook());
         this._connect(St.Settings.get(), Signal.SCHEME, () => this._applyLook());
         this._connect(settings, `changed::${Key.LAYOUT}`, () => this._rebuild());
+        this._connect(settings, `changed::${Key.SPLIT}`, () => this._rebuild());
         this._connect(this, Signal.SHOW, () => this._fit());
         this._connect(this, Signal.MAPPED, () => {
             if (this.mapped)
@@ -183,18 +186,18 @@ class Keyboard extends St.BoxLayout {
         return id;
     }
 
-    _profile() {
-        return profiles[this._settings.get_string(Key.LAYOUT)];
-    }
-
     _build() {
-        const definition = this._profile();
+        const split = this._settings.get_boolean(Key.SPLIT);
+        const definition = rowsFor(this._settings.get_string(Key.LAYOUT), split);
         const total = Math.max(...definition.map(line => line.reduce((sum, spec) => sum + spec.span, 0)));
         this._total = total;
+        this._widest = split ? widest(definition) : 0;
         for (const line of definition) {
             const row = new Row(total);
-            for (const spec of line)
+            const {left, right} = split ? halves(line) : {left: line, right: []};
+            for (const spec of [...left, ...right])
                 row.append(spec.kind === Kind.SPACER ? new St.Widget() : this._makeKey(spec), spec.span, spec.rows ?? 1);
+            row.setCut(left.length);
             this.add_child(row);
             this._rows.push(row);
         }
@@ -234,7 +237,7 @@ class Keyboard extends St.BoxLayout {
     _applyMetrics() {
         const {height, gap} = rowMetrics(this._fontSize, this._tight, this._spacing());
         for (const row of this._rows)
-            row.setMetrics(height, gap);
+            row.setMetrics(height, gap, this._unit);
     }
 
     _applyFaces() {
@@ -270,6 +273,7 @@ class Keyboard extends St.BoxLayout {
             fontSize: this._fontSize,
             tight: this._tight,
             total: this._total,
+            widest: this._widest,
             spacing: this._spacing(),
             span,
         });
@@ -302,9 +306,13 @@ class Keyboard extends St.BoxLayout {
             percent: this._settings.get_int(Key.HEIGHT),
             rows: this._rows.length,
             total: this._total,
+            widest: this._widest,
         });
         this._fontSize = fontSize;
         this._tight = tight;
+        this._unit = this._widest
+            ? unitWidth({monitorWidth: monitor.width, fontSize, tight, total: this._total, widest: this._widest})
+            : 0;
         this.set_width(monitor.width);
         this._applyStyle();
         this._applyMetrics();
@@ -407,7 +415,7 @@ class Keyboard extends St.BoxLayout {
         } else if (spec.kind === Kind.KEY) {
             this._wireKey(spec, button);
         } else if (spec.kind === Kind.HIDE) {
-            this._tracked.push(this._track(button, () => {}, () => this.emit(Signal.DISMISS)));
+            this._wireHide(button);
         } else {
             if (spec.code === Code.CAPS)
                 this._capsKey = button;
@@ -534,6 +542,45 @@ class Keyboard extends St.BoxLayout {
 
         this._tracked.push(this._track(button, down, up, move, stop));
         button.connect(Signal.DESTROY, stop);
+    }
+
+    _wireHide(button) {
+        let hold = 0;
+        let armed = false;
+        const stopHold = () => {
+            if (hold) {
+                GLib.source_remove(hold);
+                hold = 0;
+            }
+        };
+        const stop = () => {
+            stopHold();
+            if (armed) {
+                armed = false;
+                this._untint(button);
+            }
+        };
+        const down = () => {
+            stop();
+            hold = GLib.timeout_add(GLib.PRIORITY_DEFAULT, Hold.DELAY, () => {
+                hold = 0;
+                armed = true;
+                this._tint(button, false);
+                return GLib.SOURCE_REMOVE;
+            });
+        };
+        const up = (x, y) => {
+            const flip = armed;
+            stop();
+            if (!within(button, x, y))
+                return;
+            if (flip)
+                this._settings.set_boolean(Key.SPLIT, !this._settings.get_boolean(Key.SPLIT));
+            else
+                this.emit(Signal.DISMISS);
+        };
+        this._tracked.push(this._track(button, down, up, undefined, stop));
+        button.connect(Signal.DESTROY, stopHold);
     }
 
     _wirePad(button, entry) {

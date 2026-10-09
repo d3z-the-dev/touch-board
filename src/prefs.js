@@ -15,6 +15,8 @@ const Label = Object.freeze({
     APPEARANCE: 'Appearance',
     LAYOUT_ROW: 'Layout',
     LAYOUT_SUBTITLE: 'Which key block to show',
+    SPLIT_ROW: 'Split keyboard',
+    SPLIT_SUBTITLE: 'Hold Hide on the keyboard to switch',
     LOOK_ROW: 'Style',
     LOOK_SUBTITLE: 'Overall look of the keyboard',
     FONT_ROW: 'Key font',
@@ -130,6 +132,7 @@ export default class TouchBoardPreferences extends ExtensionPreferences {
     _appearance(settings, watch) {
         const group = new Adw.PreferencesGroup({title: Label.APPEARANCE});
         group.add(this._combo(settings, watch, Key.LAYOUT, Label.LAYOUT_ROW, Label.LAYOUT_SUBTITLE, Layouts));
+        group.add(this._switch(settings, Key.SPLIT, Label.SPLIT_ROW, Label.SPLIT_SUBTITLE));
         group.add(this._combo(settings, watch, Key.LOOK, Label.LOOK_ROW, Label.LOOK_SUBTITLE, Looks));
         group.add(this._spin(settings, Key.HEIGHT, Label.HEIGHT_ROW, Label.HEIGHT_SUBTITLE, 1, 5));
         group.add(this._spin(settings, Key.SPACING, Label.SPACING_ROW, Label.SPACING_SUBTITLE, 1, 5));
