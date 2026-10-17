@@ -15,6 +15,7 @@ import {Key, Case, Corner, Look, Default, functionFor, mediaFor} from './setting
 import {accentStyle} from './palette.js';
 import {percentScale, solveFontSize, unitWidth, innerWidth, rowMetrics, trayPadding} from './metrics.js';
 import {Row} from './row.js';
+import {defaultSeat} from './seat.js';
 import {track} from './tracker.js';
 import {Chooser, within} from './chooser.js';
 import {Composer} from './composer.js';
@@ -147,7 +148,7 @@ class Keyboard extends St.BoxLayout {
             close: () => chooser.close(),
         });
         this._repeat = new Gio.Settings({schema_id: Peripheral.SCHEMA});
-        this._keymap = Clutter.get_default_backend().get_default_seat().get_keymap();
+        this._keymap = defaultSeat().get_keymap();
 
         this._build();
         this._connect(settings, `changed::${Key.FKEYS}`, () => {

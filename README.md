@@ -10,7 +10,7 @@ _all **keys**, any **layout**, raw **input**_
 [![CI](https://github.com/d3z-the-dev/touch-board/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/d3z-the-dev/touch-board/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/d3z-the-dev/touch-board?label=release&color=2EA44F)](https://github.com/d3z-the-dev/touch-board/releases/latest)
 [![extensions.gnome.org](https://img.shields.io/badge/extensions.gnome.org-Touch_Board-4A86CF?logo=gnome&logoColor=white)](https://extensions.gnome.org/extension/10302/touch-board/)
-![GNOME Shell 46-50](https://img.shields.io/badge/GNOME_Shell-46--50-4A86CF?logo=gnome&logoColor=white)
+![GNOME Shell 46-51](https://img.shields.io/badge/GNOME_Shell-46--51-4A86CF?logo=gnome&logoColor=white)
 [![License GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
 <img src="docs/img/standard.svg" alt="Touch Board, standard profile" width="100%">
@@ -106,7 +106,7 @@ One-shot modifiers fill with the accent colour, locked ones add a white ring. Cl
 ## Install
 
 > [!IMPORTANT]
-> Touch Board needs **GNOME Shell 46-50**. On Wayland the shell loads a newly installed or updated copy only after you log out and back in.
+> Touch Board needs **GNOME Shell 46-51**. On Wayland the shell loads a newly installed or updated copy only after you log out and back in.
 
 ### extensions.gnome.org
 

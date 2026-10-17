@@ -1,10 +1,11 @@
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 
+import {defaultSeat} from './seat.js';
+
 export class Injector {
     constructor() {
-        const seat = Clutter.get_default_backend().get_default_seat();
-        this.device = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
+        this.device = defaultSeat().create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
     }
 
     time() {
