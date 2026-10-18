@@ -1,4 +1,4 @@
-# Touch Board — build, install and packaging for the GNOME Shell extension.
+# Touch Board: build, install and packaging for the GNOME Shell extension.
 # The installable extension lives in src/; everything else is dev tooling.
 
 UUID := $(shell sed -n 's/.*"uuid"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' src/metadata.json)

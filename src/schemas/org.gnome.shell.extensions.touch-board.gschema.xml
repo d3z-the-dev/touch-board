@@ -114,7 +114,7 @@
         <alias value="pop" target="click"/>
       </aliases>
       <summary>Click sound</summary>
-      <description>Which synthesised click to play: thock (soft, deep and muted), click (crisp, clean and short) or tap (warm, round and woody).</description>
+      <description>Which synthesised click to play: thock (deep and muted), click (crisp and short) or tap (warm and woody).</description>
     </key>
     <key name="click-volume" type="i">
       <default>35</default>

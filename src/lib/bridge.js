@@ -18,7 +18,6 @@ const Signal = Object.freeze({
     FOCUS: 'notify::key-focus',
     FOCUS_WINDOW: 'notify::focus-window',
     HEIGHT: 'notify::height',
-    Y: 'notify::y',
     DISMISS: 'dismiss',
     MOVED: 'position-changed',
     MONITORS: 'monitors-changed',
@@ -293,7 +292,8 @@ export class Bridge {
         this._box.show();
         if (this._fitIndex !== Main.layoutManager.keyboardIndex) {
             this._fitIndex = Main.layoutManager.keyboardIndex;
-            this._keyboard.refit();
+            if (this._keyboard.visible)
+                this._keyboard.refit();
         }
         this._keyboard.show();
         this._positionKeyboard();
@@ -325,9 +325,13 @@ export class Bridge {
     }
 
     _evaluate() {
+        if (!this._lifted()) {
+            this._setFocusWindow(null);
+            return;
+        }
         const monitor = Main.layoutManager.keyboardMonitor;
         const window = global.display.get_focus_window();
-        if (!window || !monitor || !this._lifted() || global.stage.key_focus ||
+        if (!window || !monitor || global.stage.key_focus ||
             window.get_monitor() !== Main.layoutManager.keyboardIndex) {
             this._setFocusWindow(null);
             return;
@@ -379,13 +383,11 @@ export class Bridge {
         const unmanagedId = window.connect(Signal.UNMANAGED, () => {
             unmanaged = true;
         });
-        const refreshId = actor.connect(Signal.Y, () => this._keyboard.queue_redraw());
         actor.ease({
             y: finalY,
             duration: Lift.DURATION,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onStopped: isFinished => {
-                actor.disconnect(refreshId);
                 window.disconnect(unmanagedId);
                 this._easing.delete(actor);
                 if (unmanaged || (show && !isFinished))

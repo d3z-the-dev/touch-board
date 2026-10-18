@@ -35,11 +35,11 @@ _all **keys**, any **layout**, raw **input**_
 ## Profiles
 
 <details>
-<summary><b>Compact (60%)</b>: the ANSI main block, nothing else</summary>
+<summary><b>Compact (60%)</b>: the main block only</summary>
 
 <img src="docs/img/compact.svg" alt="Touch Board, compact profile" width="100%">
 
-The Fn layer brings back the rest.
+>The main block of a desktop keyboard: letters, digits, punctuation and the modifier row. F1-F12, Delete, Home, End, Page Up, Page Down and the arrows are reached through Fn.
 </details>
 
 <details>
@@ -47,15 +47,15 @@ The Fn layer brings back the rest.
 
 <img src="docs/img/standard.svg" alt="Touch Board, standard profile" width="100%">
 
-Adds the function row, a navigation column (PgUp, PgDn, Home, End) and an arrow cluster. The default profile.
+>The default profile adds the function row with PrtSc and Del, a column of PgUp, PgDn, Home and End, and the arrow keys.
 </details>
 
 <details>
-<summary><b>Full (100%)</b>: everything, plus a numpad</summary>
+<summary><b>Full (100%)</b>: all keys, numpad included</summary>
 
 <img src="docs/img/full.svg" alt="Touch Board, full profile" width="100%">
 
-Standard plus an Ins/Home/PgUp over Del/End/PgDn block, PrtSc, ScrollLock and Pause with a media trio across the top, and a numpad with digit and navigation faces.
+>Standard plus the rest of a desktop keyboard: an Ins, Home, PgUp over Del, End, PgDn block, PrtSc, Scroll Lock and Pause, Mute and volume keys, a right Super and a numpad. The Num key switches the numpad between digits and navigation.
 </details>
 
 <details>
@@ -63,13 +63,13 @@ Standard plus an Ins/Home/PgUp over Del/End/PgDn block, PrtSc, ScrollLock and Pa
 
 <img src="docs/img/standard-split.svg" alt="Touch Board, standard profile, split" width="100%">
 
-Standard and Full (75% / 100%). The left half ends at 6, T, G and B, and Space becomes one key per half. Full splits into the standard rows, without the numpad, Ins, ScrollLock, Pause, the media trio and the right Super.
+>Standard and Full split between 6 and 7, T and Y, G and H, B and N, and Space is cut in two, one key per half. Full falls back to the Standard rows, so the numpad, Ins, Scroll Lock, Pause, the media keys and the right Super are left out.
 
 <img src="docs/img/compact-split.svg" alt="Touch Board, compact profile, split" width="100%">
 
-Compact (60%). Fewer columns per half, so each key is bigger.
+>Compact has fewer keys per half, so each key comes out larger.
 
-In portrait the halves move closer together, so the keys stay big enough to hit.
+>In portrait the halves move closer to the centre and the keys keep a usable size.
 </details>
 
 > [!TIP]
@@ -84,23 +84,23 @@ In portrait the halves move closer together, so the keys stay big enough to hit.
 
 <img src="docs/img/standard.svg" alt="Touch Board, standard profile, modern style, dark" width="100%">
 
-One-shot modifiers get an outline in the accent colour, locked ones a fill.
+>Flat keys on the dark scheme. A one-shot modifier shows an outline in the accent colour, a locked one is filled with it.
 </details>
 
 <details>
-<summary><b>Light</b>: modern flat keys when the system prefers light</summary>
+<summary><b>Light</b>: modern flat keys in the light colour scheme</summary>
 
 <img src="docs/img/standard-light.svg" alt="Touch Board, standard profile, modern style, light" width="100%">
 
-Same accent outline and fill as Dark.
+>The same keys when the system prefers light. Engaged modifiers keep the accent outline and fill.
 </details>
 
 <details>
-<summary><b>Classic</b>: the original dark keyboard with gradient keys</summary>
+<summary><b>Classic</b>: the original dark keyboard with shaded keys</summary>
 
 <img src="docs/img/standard-classic.svg" alt="Touch Board, standard profile, classic style" width="100%">
 
-One-shot modifiers fill with the accent colour, locked ones add a white ring. Classic stays dark in both colour schemes.
+>The dark keyboard of earlier versions, with shaded keys. A one-shot modifier fills with the accent colour, a locked one adds a white ring. Classic stays dark in both colour schemes.
 </details>
 
 ## Install
@@ -110,7 +110,7 @@ One-shot modifiers fill with the accent colour, locked ones add a white ring. Cl
 
 ### extensions.gnome.org
 
-Install [Touch Board](https://extensions.gnome.org/extension/10302/touch-board/) from extensions.gnome.org and toggle it on. This is the recommended route and brings automatic updates.
+Install [Touch Board](https://extensions.gnome.org/extension/10302/touch-board/) from extensions.gnome.org and toggle it on. This is the recommended route, with automatic updates.
 
 ### From a release
 

@@ -21,8 +21,7 @@ export class Player {
         this._sound = global.display.get_sound_player();
         this._cancellable = new Gio.Cancellable();
         this._directory = GLib.build_filenamev([GLib.get_user_cache_dir(), Cache.DIR]);
-        this._files = Array.from({length: Take.COUNT}, (_, take) =>
-            Gio.File.new_for_path(GLib.build_filenamev([this._directory, `${Cache.STEM}-${take}.${Cache.EXTENSION}`])));
+        this._files = [];
         this._take = 0;
         this._ready = false;
         this._ids = [
@@ -33,8 +32,11 @@ export class Player {
     }
 
     _prepare() {
+        const voice = this._settings.get_string(Key.SOUND);
         const volume = this._settings.get_int(Key.VOLUME);
-        this._ready = volume > 0 && this._render(Voices[this._settings.get_string(Key.SOUND)], volume / 100);
+        this._files = Array.from({length: Take.COUNT}, (_, take) => Gio.File.new_for_path(
+            GLib.build_filenamev([this._directory, `${Cache.STEM}-${voice}-${volume}-${take}.${Cache.EXTENSION}`])));
+        this._ready = volume > 0 && this._render(Voices[voice], volume / 100);
     }
 
     click() {
@@ -45,6 +47,8 @@ export class Player {
     }
 
     _render(voice, volume) {
+        if (this._files.every(file => file.query_exists(null)))
+            return true;
         if (GLib.mkdir_with_parents(this._directory, 0o755) !== 0)
             return false;
         try {

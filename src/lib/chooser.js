@@ -47,7 +47,9 @@ export class Chooser {
         Main.layoutManager.uiGroup.add_child(popup);
         this._popup = popup;
         for (const accent of accents) {
-            const choice = new St.Button({style_class: Style.POPUP_KEY, label: accent.label, can_focus: false});
+            const choice = new St.Button({style_class: Style.POPUP_KEY, label: accent.label, can_focus: false, track_hover: false});
+            for (const action of choice.get_actions())
+                choice.remove_action(action);
             this._track(choice, () => {}, () => this._select(accent));
             this._choices.push({button: choice, accent});
             popup.add_child(choice);

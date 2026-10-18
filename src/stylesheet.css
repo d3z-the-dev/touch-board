@@ -31,10 +31,12 @@
 
 .touch-board-key:pressed {
     background-color: #4a4a4d;
+    transition-duration: 0ms;
 }
 
 .touch-board-function:pressed {
     background-color: #3d3d40;
+    transition-duration: 0ms;
 }
 
 .touch-board-key:latched {
@@ -92,6 +94,7 @@
 
 .touch-board-popup-key:pressed {
     background-color: #4a4a4d;
+    transition-duration: 0ms;
 }
 
 .touch-board-popup.touch-board-sharp {

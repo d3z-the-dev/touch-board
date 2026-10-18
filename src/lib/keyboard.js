@@ -41,7 +41,6 @@ const Pseudo = Object.freeze({PRESSED: 'pressed', LATCHED: 'latched', LOCKED: 'l
 const Signal = Object.freeze({
     STATE_CHANGED: 'state-changed',
     SHOW: 'show',
-    MAPPED: 'notify::mapped',
     DESTROY: 'destroy',
     DISMISS: 'dismiss',
     SCHEME: 'notify::color-scheme',
@@ -149,9 +148,12 @@ class Keyboard extends St.BoxLayout {
         });
         this._repeat = new Gio.Settings({schema_id: Peripheral.SCHEMA});
         this._keymap = defaultSeat().get_keymap();
+        this._overrides = settings.get_value(Key.FKEYS).deep_unpack();
+        this._fitted = new Map();
 
         this._build();
         this._connect(settings, `changed::${Key.FKEYS}`, () => {
+            this._overrides = settings.get_value(Key.FKEYS).deep_unpack();
             this._applyFunctions();
             this._paint();
         });
@@ -169,10 +171,6 @@ class Keyboard extends St.BoxLayout {
         this._connect(settings, `changed::${Key.LAYOUT}`, () => this._rebuild());
         this._connect(settings, `changed::${Key.SPLIT}`, () => this._rebuild());
         this._connect(this, Signal.SHOW, () => this._fit());
-        this._connect(this, Signal.MAPPED, () => {
-            if (this.mapped)
-                this._restyle();
-        });
         this._applyLabels();
         this._applyShape();
         this._applyLook();
@@ -255,8 +253,7 @@ class Keyboard extends St.BoxLayout {
         const next = active && face.fn
             ? this._fitFace(face.button, face.fn.face, face.fn.symbol, face.span)
             : this._fitFace(face.button, face.word, face.symbol, face.span);
-        if (face.button.label !== next)
-            face.button.set_label(next);
+        this._setFace(face.button, next);
     }
 
     _refit(button) {
@@ -294,7 +291,10 @@ class Keyboard extends St.BoxLayout {
         const face = this._transform(word);
         if (symbol === undefined || !this.get_stage())
             return face;
-        return this._fits(button, face, this._inner(span)) ? face : symbol;
+        const key = `${face}\n${button.style_class}\n${button.style}\n${span}`;
+        if (!this._fitted.has(key))
+            this._fitted.set(key, this._fits(button, face, this._inner(span)));
+        return this._fitted.get(key) ? face : symbol;
     }
 
     _fit() {
@@ -311,6 +311,7 @@ class Keyboard extends St.BoxLayout {
         });
         this._fontSize = fontSize;
         this._tight = tight;
+        this._fitted.clear();
         this._unit = this._widest
             ? unitWidth({monitorWidth: monitor.width, fontSize, tight, total: this._total, widest: this._widest})
             : 0;
@@ -356,26 +357,17 @@ class Keyboard extends St.BoxLayout {
             this.remove_style_class_name(name);
     }
 
-    _restyle() {
-        this.style_changed();
-        const settle = actor => {
-            if (actor instanceof St.Widget)
-                actor.ensure_style();
-            for (const child of actor.get_children())
-                settle(child);
-        };
-        settle(this);
-        this.queue_redraw();
-    }
-
     _makeKey(spec) {
         const modifiers = this._modifiers;
         const button = new St.Button({
             style_class: this._styleFor(spec),
             can_focus: false,
+            track_hover: false,
             x_expand: true,
             y_expand: true,
         });
+        for (const action of button.get_actions())
+            button.remove_action(action);
         button._spec = spec;
 
         if (spec.pad) {
@@ -426,7 +418,6 @@ class Keyboard extends St.BoxLayout {
     }
 
     _applyFunctions() {
-        this._overrides = this._settings.get_value(Key.FKEYS).deep_unpack();
         const active = this._fnLayer.active();
         for (const entry of this._fkeys) {
             const assigned = this._assigned(entry.slot);
@@ -437,8 +428,7 @@ class Keyboard extends St.BoxLayout {
             const face = source
                 ? this._fitFace(entry.button, source.face, source.symbol, entry.span)
                 : this._transform(entry.label);
-            if (entry.button.label !== face)
-                entry.button.set_label(face);
+            this._setFace(entry.button, face);
         }
     }
 
@@ -674,8 +664,7 @@ class Keyboard extends St.BoxLayout {
             const next = this._numeric
                 ? entry.numeric.face
                 : this._fitFace(entry.button, entry.nav.word, entry.nav.symbol, entry.span);
-            if (entry.button.label !== next)
-                entry.button.set_label(next);
+            this._setFace(entry.button, next);
         }
     }
 
@@ -781,11 +770,8 @@ class Keyboard extends St.BoxLayout {
     }
 
     _applyLabels() {
-        for (const {button, base} of this._statics) {
-            const face = this._transform(base);
-            if (button.label !== face)
-                button.set_label(face);
-        }
+        for (const {button, base} of this._statics)
+            this._setFace(button, this._transform(base));
         this._applyFunctions();
     }
 
@@ -810,7 +796,6 @@ class Keyboard extends St.BoxLayout {
         const layoutId = this._faceId();
         const level = {shift: this._modifiers.shifted(), altgr: this._modifiers.altgr()};
         const active = this._fnLayer.active();
-        let dirty = false;
         for (const button of this._glyphs) {
             const spec = button._spec;
             if (spec.fn)
@@ -818,13 +803,15 @@ class Keyboard extends St.BoxLayout {
             const face = active && spec.fn
                 ? this._fnFace(button, spec.fn, spec.span)
                 : glyphFor(layoutId, spec.code, level);
-            if (button.label !== face) {
-                button.set_label(face);
-                dirty = true;
-            }
+            this._setFace(button, face);
         }
-        if (dirty)
-            this.queue_redraw();
+    }
+
+    _setFace(button, face) {
+        if (button.label === face)
+            return;
+        button.set_label(face);
+        button.queue_redraw();
     }
 
     _fnScale(button, fn, glyph) {

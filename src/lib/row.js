@@ -16,6 +16,8 @@ class Row extends St.Widget {
         this._tail = 0;
         this._spans = [];
         this._rowspans = [];
+        this._actors = [];
+        this._slot = new Clutter.ActorBox();
     }
 
     setMetrics(height, gap, unit) {
@@ -35,6 +37,7 @@ class Row extends St.Widget {
     append(actor, span, rows = 1) {
         this._spans.push(span);
         this._rowspans.push(rows);
+        this._actors.push(actor);
         this.add_child(actor);
     }
 
@@ -48,7 +51,7 @@ class Row extends St.Widget {
             return [height, height];
         let min = 0;
         let nat = 0;
-        for (const child of this.get_children()) {
+        for (const child of this._actors) {
             const [childMin, childNat] = child.get_preferred_height(-1);
             min = Math.max(min, childMin);
             nat = Math.max(nat, childNat);
@@ -57,27 +60,21 @@ class Row extends St.Widget {
     }
 
     vfunc_allocate(box) {
-        const {_total: total, _spans: spans, _rowspans: rowspans, _gap: gap} = this;
+        const {_total: total, _spans: spans, _rowspans: rowspans, _gap: gap, _actors: actors, _slot: slot} = this;
         this.set_allocation(box);
         const width = box.x2 - box.x1;
         const height = box.y2 - box.y1;
         const unit = this._unit || width / total;
-        const children = this.get_children();
         let offset = 0;
-        for (let index = 0; index < children.length; index++) {
+        for (let index = 0; index < actors.length; index++) {
             if (index === this._cut)
                 offset = width - this._tail * unit;
             const next = offset + unit * spans[index];
             const x1 = Math.round(offset) + gap;
             const x2 = Math.round(next) - gap;
             const bottom = rowspans[index] * height - gap;
-            const slot = new Clutter.ActorBox({
-                x1,
-                y1: gap,
-                x2: Math.max(x1, x2),
-                y2: Math.max(gap, bottom),
-            });
-            children[index].allocate(slot);
+            slot.init(x1, gap, Math.max(x1, x2), Math.max(gap, bottom));
+            actors[index].allocate(slot);
             offset = next;
         }
     }
